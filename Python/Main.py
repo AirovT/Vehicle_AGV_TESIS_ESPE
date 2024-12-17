@@ -1237,82 +1237,79 @@ def centrar_ventana(ventana,ancho,largo):
     return ventana.geometry(f"{ancho}x{largo}+{x}+{y}")
 # Crear la ventana principal
 ventana = tk.Tk()
+#ventana.overrideredirect(True)
 ventana.title("Ventana de Inicio")
+# Cambiar el color de fondo de la ventana
 w,h = ventana.winfo_screenwidth(), ventana.winfo_screenheight()
 ventana.geometry("%dx%d+0+0"%(w,h))
 ventana.resizable(width=0,height=0)
-centrar_ventana(ventana,800,500)
-# Crear un Frame del mismo tamaño que la ventana
-frame = tk.Frame(ventana)
-frame.place(x=0,y=0,relwidth=1,relheight=1)
-# Dividir el frame en dos subframes
-frame_left = tk.Frame(frame,bd=0,width=400,bg='white')
-frame_right = tk.Frame(frame,bd=0,width=400,bg='white')
+centrar_ventana(ventana,700,500)
+# Configurar la cuadrícula de la ventana principal
+ventana.rowconfigure(0, weight=8)  # Fila superior
+ventana.rowconfigure(1, weight=0)  # Fila inferior
+ventana.columnconfigure(0, weight=1)  # Única columna
 
-frame_left.pack(side='left', expand=True, fill=tk.BOTH)
-frame_right.pack(side='right', expand=True, fill=tk.BOTH)
+# Crear Frame para la fila superior
+frame_upper = tk.Frame(ventana)
+frame_upper.grid(row=0, column=0, sticky="nsew")  # Ocupa toda la fila superior
 
-# Dividir el frame_derecha en dos subframes
-frame_right_top = tk.Frame(frame_right,height=105, width=400, bg='white')
-frame_right_bottom = tk.Frame(frame_right,height=400, width=400)
-
-frame_right_top.pack(side='top', expand=True, fill=tk.BOTH)
-frame_right_bottom.pack(side='bottom', expand=True, fill=tk.BOTH)
-#######################################################################################################
+# Crear Frame para la fila inferior
+frame_lower = tk.Frame(ventana)
+frame_lower.grid(row=1, column=0, sticky="nsew")  # Ocupa toda la fila inferior
 #Obtener la ruta del directorio actual
 dir = os.path.dirname(__file__)
-######################################## FRAME IZQUIERDO ##############################################
-ruta_logo = os.path.join(dir,'HMI','Venture.png')
-logo = leer_imagen(ruta_logo,(400,500))
+######################################## FRAME SUPERIOR ##############################################
+ruta_logo = os.path.join(dir,'HMI','Presentacion.png')
+logo1 = leer_imagen(ruta_logo,(700,400))
 # Crear un widget Label y asignarle la imagen
-label_left = tk.Label(frame_left,image=logo)
+label_left = tk.Label(frame_upper,image=logo1)
 label_left.place(x=0,y=0,relwidth=1,relheight=1)
-####################################### FRAME DERECHO ##################################################
-################################# SUBFRAME DERECHO SUPERIOR ############################################
-path_logo = os.path.join(dir,'HMI','ESPE.png')
-logo1 = leer_imagen(path_logo,(400,101))
-title = tk.Label(frame_right_top,image=logo1)
-title.place(relx=0.5, rely=0, anchor='n',relwidth=1, relheight=1)
+####################################### FRAME INFERIOR ##################################################
+# Colocar la imagen de fondo en el frame inferior
+ruta_fondo = os.path.join(dir, 'HMI', 'Presentacion 2.png')  # Ruta de la imagen de fondo para la fila inferior
+fondo_imagen = leer_imagen(ruta_fondo, (700, 150))  # Ajusta el tamaño de la imagen de fondo
+fondo = tk.Label(frame_lower, image=fondo_imagen)
+fondo.place(x=0, y=0, relwidth=1, relheight=1)  # Colocar la imagen de fondo y ajustarla al tamaño del frame
 
-################################# SUBFRAME DERECHO INFERIOR ############################################
-Presentacion = "PROYECTO DE TITULACIÓN"
-title2 = tk.Label(frame_right_bottom, text=Presentacion, font=("Arial", 12, "bold"))
-title2.place(relx=0.5,rely=0,anchor='n')
-Presentacion1 = "SISTEMA DE NAVEGACIÓN AUTÓNOMA"
-title5 = tk.Label(frame_right_bottom, text=Presentacion1, font=("Arial", 12, "bold"))
-title5.place(relx=0.5,rely=0.07,anchor='n')
-Autores = "AUTORES: PINTA DIEGO"
-title3 = tk.Label(frame_right_bottom, text=Autores, font=("Arial", 12, "bold"), anchor='w',justify='left')
-title3.place(relx=0.55,rely=0.18,anchor='e')
-Autores1 = "TORRES JAIRO"
-title6 = tk.Label(frame_right_bottom, text=Autores1, font=("Arial", 12, "bold"), anchor='w',justify='left')
-title6.place(relx=0.59,rely=0.25,anchor='e')
+# Configurar el layout del frame inferior para centrar los botones
+frame_lower.columnconfigure(0, weight=1)  # Columna vacía a la izquierda
+frame_lower.columnconfigure(1, weight=1)  # Columna para el botón AUTOMÁTICO
+frame_lower.columnconfigure(2, weight=1)  # Columna para el botón MANUAL
+frame_lower.columnconfigure(3, weight=1)  # Columna para el botón SALIR
+frame_lower.columnconfigure(4, weight=1)  # Columna vacía a la derecha
 
-Mando = "CONTROL DE MANDO"
-title4 = tk.Label(frame_right_bottom, text=Mando, font=("Arial", 12, "bold"))
-title4.place(relx=0.5,rely=0.35,anchor='e')
+# Crear un frame con borde superior e inferior
+frame_border = tk.Frame(frame_lower, bd=0)
+frame_border.grid(row=0, column=0, columnspan=5, sticky="nw", padx=20)
 
-# Crear un Frame para los botones
-frame_botones = tk.Frame(frame_right_bottom)
-frame_botones.place(relx=0.5,rely=0.38, anchor='n')
+# Etiqueta de título con el texto
+title4 = tk.Label(frame_border, text='CONTROL DE MANDO', font=("Arial", 14, "bold"))
+title4.pack()  # Agregar margen superior e inferior al texto
 
+# Crear el borde superior e inferior
+border_top = tk.Frame(frame_border, height=1, bg="black")
+border_top.pack(fill="x", side="top", expand=True)  # Expande a lo largo de toda la fila
+
+border_bottom = tk.Frame(frame_border, height=1, bg="black")
+border_bottom.pack(fill="x", side="bottom", expand=True) 
 # Botón "Modo Automático"
-ruta1 = os.path.join(dir,'HMI','Automatico.png')
-logo2 = leer_imagen(ruta1,(40,35))
-boton_auto = tk.Button(frame_botones,image=logo2,text="AUTOMÁTICO",font=("Arial", 10, "bold"),command=ventana_automatico,compound="left",padx=10,width=130)
-boton_auto.pack(pady=10) 
+ruta1 = os.path.join(dir, 'HMI', 'Automatico.png')
+logo2 = leer_imagen(ruta1, (40, 30))
+boton_auto = tk.Button(frame_lower, image=logo2, text="AUTOMÁTICO", font=("Arial", 10, "bold"), command=ventana_automatico, compound="left", padx=10, width=130)
+boton_auto.grid(row=1, column=2, padx=20, pady=20)
 
 # Botón "Modo Manual"
-ruta2 = os.path.join(dir,'HMI','Manual.png')
-logo3 = leer_imagen(ruta2,(40,35))
-boton_manual = tk.Button(frame_botones,image=logo3,text="MANUAL", font=("Arial", 10, "bold"),command=ventana_manual,compound="left",padx=10,width=130)
-boton_manual.pack(pady=(10,50))
+ruta2 = os.path.join(dir, 'HMI', 'Manual.png')
+logo3 = leer_imagen(ruta2, (40, 30))
+boton_manual = tk.Button(frame_lower, image=logo3, text="MANUAL", font=("Arial", 10, "bold"), command=ventana_manual, compound="left", padx=10, width=130)
+boton_manual.grid(row=1, column=1, padx=20, pady=20)
 
 # Botón "Salir"
-ruta3 = os.path.join(dir,'HMI','Salir.png')
-logo4 = leer_imagen(ruta3,(40,30))
-boton_salir = tk.Button(frame_right_bottom,image=logo4,text="SALIR",font=("Arial", 10, "bold"),command=ventana.quit,compound="left",padx=5,width=110)
-boton_salir.place(relx=1.0, rely=1.0, anchor='se', x=-20, y=-20)
+ruta3 = os.path.join(dir, 'HMI', 'Salir.png')
+logo4 = leer_imagen(ruta3, (40, 30))
+boton_salir = tk.Button(frame_lower, image=logo4, text="SALIR", font=("Arial", 10, "bold"), command=ventana.quit, compound="left", padx=10, width=110)
+boton_salir.grid(row=1, column=3, padx=20, pady=20)
+
 
 ventana.mainloop()
 
