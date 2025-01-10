@@ -30,7 +30,7 @@ from Aruco_Medicion_Distancia import PIDController
 
 
 import serial
-import json
+
 
 ##########################################  Variables #########################################
 valoranteriorcajamesa1 = 3
@@ -230,13 +230,9 @@ class VentanaAutomatico:
                         if Buscar == id: #Cuando el aruco objetivo es encontrado 
 
                             Verificador_Aruco = True #Asiganamos el valor de true para decir que si se encontro el aruco objetivo
-                            data = {
-                                "Modo" : str("Quieto"), #Detenemos al robot
-                                }
-                            # Convertir el diccionario a una cadena JSON
-                            json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-                            # Enviar la cadena JSON a Arduino a través del puerto serie
-                            self.serialArduino.write(json_data.encode())
+                            datos = "20,0"
+                    
+                            self.serialArduino.write(datos.encode())
                             time.sleep(1)
                             # self.serialArduino.close() # Cerramos el envio de datos bluetooth
                             time.sleep(0.5)
@@ -274,31 +270,23 @@ class VentanaAutomatico:
             "Dato_movimiento": direccion,
             "Dato_velocidad": tiempo
         }
-        # Convertir el diccionario a una cadena JSON
+        datos = "0,0,0,0"
         try:
-            json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-            # Enviar la cadena JSON a Arduino a través del puerto serie
-            self.serialArduino.write(json_data.encode())
-            print("Datos enviados a Arduino:", json_data)
+    
+            self.serialArduino.write(datos.encode())
+            print("Datos enviados a Arduino:", datos)
         except Exception as e:
             print(f"Error al enviar datos a Arduino: {e}")
         pass
         time.sleep(tiempo)
 
+    
     def MoverPor(self, velocidad, tiempo):
         print(f"Girando a velocidad {velocidad} por {tiempo} segundos...")
-        data = {
-            "Modo" : "Auto",
-            "Dato_movimiento": "MoverPor",
-            "Dato_velocidad": velocidad,
-            "Dato_tiempo": tiempo
-            }
-        # Convertir el diccionario a una cadena JSON
+        datos = "0,0,0,0,0"
         try:
-            json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-            # Enviar la cadena JSON a Arduino a través del puerto serie
-            self.serialArduino.write(json_data.encode())
-            print("Datos enviados a Arduino:", json_data)
+            self.serialArduino.write(datos.encode())
+            print("Datos enviados a Arduino:", datos)
         except Exception as e:
             print(f"Error al enviar datos a Arduino: {e}")
         pass
@@ -307,63 +295,36 @@ class VentanaAutomatico:
 
     def Girar(self):
         print("Girando........")
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Giro_Antihorario",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
+        datos = "0,0,0,0"
+
         self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
-        self.serialArduino.write(json_data.encode())
+        self.serialArduino.write(datos.encode())
         pass
 
     def CogerCarga(self):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Coger_Carga",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
-        print(f"Enviando datos a Arduino: {json_data}")
+        datos = "14"
+        print(f"Enviando datos a Arduino: {datos}")
         self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
         time.sleep(0.5)
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode('utf-8'))
+        self.serialArduino.write(datos.encode('utf-8'))
         time.sleep(0.5)
         pass
 
     def DejarCarga(self):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Dejar_Carga",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
-        print(f"Enviando datos a Arduino: {json_data}")
+        datos = "15"
+        print(f"Enviando datos a Arduino: {datos}")
         self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
         time.sleep(0.5)
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode('utf-8'))
+        self.serialArduino.write(datos.encode('utf-8'))
         time.sleep(0.5)
         pass
 
     def ir_piso(self, piso_valor):
         # Configurar los datos a enviar
-        data = {
-            "Modo": "Manual",
-            "Dato_movimiento": "Ir_Piso",
-            "Dato_velocidad": piso_valor  # Aquí se debe colocar el valor del piso, por ejemplo, "PISO A1"
-        }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
-        print(f"Enviando datos a Arduino: {json_data}")
-        # Enviar la cadena JSON a Arduino a través del puerto serie
+        datos = "0,0,0,0"
+        print(f"Enviando datos a Arduino: {datos}")
         self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
-        self.serialArduino.write(json_data.encode('utf-8'))
+        self.serialArduino.write(datos.encode('utf-8'))
         pass
 
 ########################################################## MODO MANUAL ################################################################################
@@ -766,150 +727,74 @@ class VentanaManual:
     def ir_piso(self):
         piso_valor = self.niveles.index(self.valor.get()) # Obtener el índice numérico de la selección
         # Configurar los datos a enviar
-        data = {
-            "Modo": "Manual",
-            "Dato_movimiento": "Ir_Piso",
-            "Dato_velocidad": piso_valor  # Aquí se debe colocar el valor del piso, por ejemplo, "PISO A1"
-        }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
-        print(f"Enviando datos a Arduino: {json_data}")
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode('utf-8'))
+        datos = "0,0,0,0"
+        print(f"Enviando datos a Arduino: {datos}")
+        self.serialArduino.write(datos.encode('utf-8'))
         pass
 
     def Giro_Horario(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Giro_Horario",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
-        print(f"Enviando datos a Arduino: {json_data}")
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode('utf-8'))
+        datos = "0,0,0,0"
+        print(f"Enviando datos a Arduino: {datos}")
+
+        self.serialArduino.write(datos.encode('utf-8'))
         pass
 
     def Giro_Antihorario(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Giro_Antihorario",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        print(f"Enviando datos a Arduino: {json_data}")
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = {"20,100,100,100,100"}
+        print(f"Enviando datos a Arduino: {datos}")
+
+        self.serialArduino.write(datos.encode())
         pass
 
     def Derecha(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Derecha",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        print(f"Enviando datos a Arduino: {json_data}")
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+
+        print(f"Enviando datos a Arduino: {datos}")
+
+        self.serialArduino.write(datos.encode())
         pass
 
     def Izquierda(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Izquierda",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        print(f"Enviando datos a Arduino: {json_data}")
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        print(f"Enviando datos a Arduino: {datos}")
+        self.serialArduino.write(datos.encode())
         pass
 
     def Adelante(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Adelante",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+
+        self.serialArduino.write(datos.encode())
         pass
 
     def Atras(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Atras",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+
+        self.serialArduino.write(datos.encode())
         pass
 
     def Diagonal_Superior_IZQ(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Diagonal_Superior_IZQ",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        self.serialArduino.write(datos.encode())
         pass
 
     def Diagonal_Superior_DER(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Diagonal_Superior_DER",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        self.serialArduino.write(datos.encode())
         pass
 
     def Diagonal_Inferior_IZQ(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Diagonal_Inferior_IZQ",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        self.serialArduino.write(datos.encode())
         pass
 
     def Diagonal_Inferior_DER(self, event):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Diagonal_Inferior_DER",
-            "Dato_velocidad": self.velocidad
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        self.serialArduino.write(datos.encode())
         pass
 
     def soltar_boton1(self, event):
-        data = {
-            "Modo" : str("Quieto"),
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        self.serialArduino.write(datos.encode())
         pass
     ############################################################################################################
     
@@ -1094,14 +979,10 @@ class VentanaManual:
     def enviar_datos(self, movimiento):
         piso = self.valor.get()  # Asumiendo que tienes self.valor definido correctamente
         if piso in self.niveles:  # Asumiendo que tienes self.niveles definido correctamente
-            data = {
-                "Modo": "Manual",
-                "Dato_movimiento": movimiento,
-            }
-            json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-            print(f"Enviando datos: {json_data}")
+            datos = "0,0,0,0"
+            print(f"Enviando datos: {datos}")
             # Asumiendo que tienes self.serialArduino definido correctamente
-            self.serialArduino.write(json_data.encode())
+            self.serialArduino.write(datos.encode())
     
     def resetear_leds(self):
         # Asumiendo que tienes definidos correctamente canvas1, canvas2, canvas3, led_subir, led_bajar, led_detener
@@ -1136,13 +1017,9 @@ class VentanaManual:
         self.control_led("FIN", self.canvas6, 2)
 
     def enviar_datos2(self, control):
-        data = {
-            "Modo": "Manual",
-            "Dato_movimiento": control
-        }
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        print(f"Enviando datos: {json_data}")  # Mensaje de depuración
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        print(f"Enviando datos: {datos}")  # Mensaje de depuración
+        self.serialArduino.write(datos.encode())
     ####################################################################################################
 
     def control_led1(self,comando1,led_canvas, led_index1):
@@ -1166,13 +1043,9 @@ class VentanaManual:
         self.control_led1("APAGAR_IMAN", self.canvas8, 1)
     
     def enviar_datos3(self,estado):
-        data = {
-            "Modo": "Manual",
-            "Dato_movimiento": estado
-        }
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        print(f"Enviando datos: {json_data}")
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+        print(f"Enviando datos: {datos}")
+        self.serialArduino.write(datos.encode())
         pass
     ####################################################################################################
     
@@ -1183,24 +1056,14 @@ class VentanaManual:
 
     def enviar_datos4(self, Angulo):
         # Aquí puedes modificar la función según tus necesidades
-        data = {
-            "Modo": "Manual",
-            "Dato_movimiento": "Servo",
-            "Dato_velocidad": Angulo
-        }
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
+        datos = "0,0,0,0"
         # Suponiendo que `self.serialArduino` está inicializado correctamente
-        self.serialArduino.write(json_data.encode())
+        self.serialArduino.write(datos.encode())
 
     def Leer_Datos(self):
-        data = {
-            "Modo" : "Manual",
-            "Dato_movimiento": "Leer",
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
+        datos = "0,0,0,0"
+
+        self.serialArduino.write(datos.encode())
         pass
 
 ########################################################## Ventana Principal ################################################################################
