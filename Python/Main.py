@@ -47,7 +47,7 @@ class VentanaAutomatico:
     def __init__(self, master):
         self.master = master
         master.title("Ventana de Modo Automaticó Iniciada")
-        self.master.geometry("600x150")
+        self.master.geometry("850x650")
         # Obtener el ancho y alto de la pantalla
         ancho_pantalla = master.winfo_screenwidth()
         alto_pantalla = master.winfo_screenheight()
@@ -57,7 +57,7 @@ class VentanaAutomatico:
         # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         
-        self.velocidad = 100
+        self.velocidad = 100 
 
         # Crear la instancia de la clase VentanaAutomatico y pasarle la instancia de Tk
         # Iniciar el bucle de eventos de Tkinter
@@ -67,35 +67,134 @@ class VentanaAutomatico:
         y = 0  # La ventana estará en la parte superior
         
         # Establecer la posición de la ventana
-        master.geometry(f"600x150+{x}+{y}")
-        Titulo=tk.Label(master,text="Modo Automaticó", font=("Arial", 20))
-        Titulo.pack()
+        master.geometry(f"850x650+{x}+{y}")
+        
+        # Construir las rutas relativas a las imágenes
+        path_logo_U = os.path.join(dir, 'HMI', 'Logo_U.png')
+        path_logo_C = os.path.join(dir, 'HMI', 'Logo_M.png')
 
+        # Cargar la imagen del logo de la universidad
+        imagen_U = leer_imagen(path_logo_U,(120,100))
+        # Cargar la imagen del logo de la carrera
+        imagen_C = leer_imagen(path_logo_C,(120,100))
+
+        # Crear un frame para contener las imágenes y el texto
+        frame_contenedor = tk.Frame(master)
+        frame_contenedor.pack(fill='x')
+
+        # Mostrar el logo de la universidad
+        label_logo_universidad = tk.Label(frame_contenedor,image=imagen_U)
+        label_logo_universidad.image = imagen_U
+        label_logo_universidad.pack(side=tk.LEFT, padx=(20, 0), pady=10, anchor='w')
+
+        # Mostrar el logo de la carrera
+        label_logo_carrera = tk.Label(frame_contenedor,image=imagen_C)
+        label_logo_carrera.image = imagen_C
+        label_logo_carrera.pack(side=tk.RIGHT, padx=(0, 20), pady=10, anchor='e')
+
+        # Mostrar el texto
+        texto = "UNIVERSIDAD DE LAS FUERZAS ARMADAS ESPE-L \n\nSISTEMA DE NAVEGACION AUTONOMA \n\nCONTROL DE MANDO: AUTOMÁTICO"
+        label_texto = tk.Label(frame_contenedor, text=texto, font=("Arial", 14, "bold"))
+        label_texto.pack(side=tk.LEFT, expand=True, fill="both", padx=(10, 0), pady=10, anchor='center')
+
+        ########################## Frame de indicadores ###################
+        # Crear marco principal para dividir en dos áreas
+        self.contenedor_principal = tk.Frame(master)
+        self.contenedor_principal.pack(fill=tk.BOTH, expand=True)
+
+        # Crear columna izquierda
+        self.lado_izquierdo = tk.Frame(self.contenedor_principal, width=200)
+        self.lado_izquierdo.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
+
+        # Crear los óvalos con las etiquetas (inicialmente en gris)
+        self.estados_robot = [
+            ("ROBOT EN MOVIMIENTO", "gray"),
+            ("ROBOT ESPERANDO DATO", "gray"),
+            ("ROBOT CONECTADO", "green")
+        ]
+
+        self.ovalo_widgets = []  # Lista para almacenar los widgets de los óvalos
+
+        for texto, color in self.estados_robot:
+            etiqueta = tk.Label(
+                self.lado_izquierdo, 
+                text=texto, 
+                font=("Arial", 10, "bold"),  # Texto en negrillas
+                anchor="center",  # Centramos el texto
+                justify="center"  # Aseguramos alineación centrada
+            )
+            etiqueta.pack(anchor="center", pady=5)  # Centramos la etiqueta en el marco
+
+            canvas = tk.Canvas(self.lado_izquierdo, width=80, height=80)
+            canvas.pack(anchor="center", pady=5)  # Centramos el canvas
+            ovalo = canvas.create_oval(10, 10, 70, 70, fill=color)  # Óvalos de 20px de diámetro
+            self.ovalo_widgets.append((canvas, ovalo))  # Almacenar el canvas y el óvalo para cambiar colores
+
+
+        ##################################################################################
+
+        
         self.Area_botonesAuto = tk.Frame(master)  # Crear un frame para contener los botones
         self.Area_botonesAuto.pack(pady=10) 
 
-        self.botonInicioA = tk.Button(self.Area_botonesAuto, text ="Inicio",command=self.Validaciones_Inicio, width=15, height=2)
+        # Botón "Regresar"
+        rutaAnterior = os.path.join(dir, 'HMI', 'Regresar.png')  # Ruta de la imagen
+        self.ima13 = leer_imagen(rutaAnterior, (40, 30))  # Cargar y redimensionar la imagen
+        self.boton_regresar = tk.Button(
+            self.Area_botonesAuto,
+            image=self.ima13,  # Usar la imagen cargada
+            text="REGRESAR",  # Texto del botón
+            font=("Arial", 10, "bold"),  # Fuente y estilo del texto
+            command=abrir_ventana_principal_auto,  # Comando asociado al botón
+            compound="left",  # Colocar la imagen a la izquierda del texto
+            padx=5,  # Espaciado interno horizontal
+            width=110  # Ancho del botón
+        )
+        self.boton_regresar.pack(side=tk.LEFT, padx=10)  # Empaquetar el botón con separación horizontal
+
+        
+        # Modificar el botón "Inicio" para que sea verde y diga "Start"
+        self.botonInicioA = tk.Button(self.Area_botonesAuto, text="INICIO", command=self.Validaciones_Inicio, width=15, height=2, bg="green",  fg="white", font=("Arial", 10, "bold")  )
         self.botonInicioA.pack(side=tk.LEFT, padx=10)
 
-        self.boton_reiniciarA = tk.Button(self.Area_botonesAuto, text="Reiniciar", width=15, height=2)  # Crear un botón con texto y comando asociado
-        self.boton_reiniciarA.pack(side=tk.LEFT, padx=10)  # Empaquetar el botón en el frame, alineado a la izquierda con un espacio horizontal de 10 píxeles
+        # Botón de emergencia "STOP"
+        self.boton_reiniciarA = tk.Button(
+            self.Area_botonesAuto,
+            text="STOP",  # Texto del botón
+            width=15,  # Ancho del botón
+            height=2,  # Alto del botón
+            bg="red",  # Color de fondo rojo (simula un botón de emergencia)
+            fg="white",  # Color del texto blanco
+            font=("Arial", 10, "bold")  # Reemplaza con la función correspondiente
+        )
+        self.boton_reiniciarA.pack(side=tk.LEFT, padx=10)  # Empaquetar el botón con separación horizontal
 
-        self.boton_regresar = tk.Button(self.Area_botonesAuto, text="Regresar", command=abrir_ventana_principal_auto ,width=15, height=2)  # Crear un botón con texto y comando asociado
-        self.boton_regresar.pack(side=tk.LEFT, padx=10)  # Empaquetar el botón en el frame, alineado a la izquierda con un espacio horizontal de 10 píxeles
+        # Boton Salir
+        self.boton_salirA = tk.Button(self.Area_botonesAuto, text="SALIR", image=logo4, command=VenAuto.quit, 
+        width=110,  # Ajustar ancho del botón
+        height=30,  # Ajustar alto del botón
+        compound="left",  # Colocar la imagen a la izquierda del texto
+        font=("Arial", 10, "bold"),  # Fuente del texto
+        padx=10  # Separación interna
+        )
 
-        self.boton_salirA = tk.Button(self.Area_botonesAuto, text="Salir", command=VenAuto.quit, width=15, height=2)  # Crear un botón con texto y comando asociado
-        self.boton_salirA.pack(side=tk.LEFT, padx=10)  # Empaquetar el botón en el frame, alineado a la izquierda con un espacio horizontal de 10 píxeles
+        # Empaquetar el botón en el frame
+        self.boton_salirA.pack(side=tk.LEFT, padx=10)
 
         # Crear un Label para mostrar el estado
         self.label_estado = tk.Label(master, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         self.label_estado.pack(side=tk.BOTTOM, fill=tk.X)
-    
+
 ##################################### FINAL DE INTERFAZ GRAFICA ###################################################
 
     #Funcion al procesar el boton de inicio
     def Validaciones_Inicio(self):
         # AccionesRobot = PIDController(0.01, 0.01, 0.1 , 200, 0)
-
+        
+        #Cambio de color del primer circulo referencial como led
+        self.master.after(0, lambda: self.cambiar_color(0, "red"))
+        self.master.after(0, lambda: self.cambiar_color(2, "gray"))
+        
         funciones_complementarias = Tesis_Funciones_Version.Funciones_Complementarias(mqtt_server, mqtt_port) #Inicializamos el fichero de tesis funciones version complementarias
         print("Inicia el proceso de validaciones_Inicio")
         
@@ -280,7 +379,13 @@ class VentanaAutomatico:
         pass
         time.sleep(tiempo)
 
-    
+    #Funcion para cambiar el color de los indicadores
+    def cambiar_color(self, indice, color):
+        # Cambiar el color de un óvalo específico
+        canvas, ovalo = self.ovalo_widgets[indice]
+        canvas.itemconfig(ovalo, fill=color)
+
+
     def MoverPor(self, velocidad, tiempo):
         print(f"Girando a velocidad {velocidad} por {tiempo} segundos...")
         datos = "0,0,0,0,0"
