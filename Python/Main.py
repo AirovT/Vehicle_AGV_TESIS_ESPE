@@ -32,6 +32,8 @@ from Aruco_Medicion_Distancia import PIDController
 import serial
 
 
+
+
 ##########################################  Variables #########################################
 valoranteriorcajamesa1 = 3
 cajavalormesa1 = 4
@@ -45,6 +47,22 @@ mqtt_port = 1883
 
 class VentanaAutomatico:
     def __init__(self, master):
+
+        try:
+            puerto_serial = serial.Serial('COM3', baudrate=9600, timeout=1)  # Ajustar el puerto y parámetros según necesidad
+        except Exception as e:
+            print(f"Error al inicializar la conexión serial: {e}")
+            return
+
+        # Asegurarse de cerrar el puerto si ya está abierto
+        if puerto_serial.is_open:
+            print("Cerrando puerto serial previamente abierto...")
+            puerto_serial.close()
+
+        # Abrir el puerto serial
+        print("Abriendo puerto serial...")
+        puerto_serial.open()
+        
         self.master = master
         master.title("Ventana de Modo Automaticó Iniciada")
         self.master.geometry("850x650")
@@ -54,8 +72,8 @@ class VentanaAutomatico:
         
         # Crear la instancia de Tk
         
-        # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
-        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        self.serialArduino = serial.Serial("COM3", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         
         self.velocidad = 100 
 
@@ -331,7 +349,8 @@ class VentanaAutomatico:
                             Verificador_Aruco = True #Asiganamos el valor de true para decir que si se encontro el aruco objetivo
                             datos = "20,0"
                     
-                            self.serialArduino.write(datos.encode())
+                            mensaje_con_salto = datos + "\n"
+                            self.serialArduino.write(mensaje_con_salto.encode())
                             time.sleep(1)
                             # self.serialArduino.close() # Cerramos el envio de datos bluetooth
                             time.sleep(0.5)
@@ -364,15 +383,11 @@ class VentanaAutomatico:
 
     def GirarPor(self, direccion, tiempo):
         print(f"Girando en dirección {direccion} por {tiempo} segundos...")
-        data = {
-            "Modo" : "Auto",
-            "Dato_movimiento": direccion,
-            "Dato_velocidad": tiempo
-        }
         datos = "0,0,0,0"
         try:
     
-            self.serialArduino.write(datos.encode())
+            mensaje_con_salto = datos + "\n"
+            self.serialArduino.write(mensaje_con_salto.encode())
             print("Datos enviados a Arduino:", datos)
         except Exception as e:
             print(f"Error al enviar datos a Arduino: {e}")
@@ -390,7 +405,8 @@ class VentanaAutomatico:
         print(f"Girando a velocidad {velocidad} por {tiempo} segundos...")
         datos = "0,0,0,0,0"
         try:
-            self.serialArduino.write(datos.encode())
+            mensaje_con_salto = datos + "\n"
+            self.serialArduino.write(mensaje_con_salto.encode())
             print("Datos enviados a Arduino:", datos)
         except Exception as e:
             print(f"Error al enviar datos a Arduino: {e}")
@@ -402,25 +418,28 @@ class VentanaAutomatico:
         print("Girando........")
         datos = "0,0,0,0"
 
-        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
-        self.serialArduino.write(datos.encode())
+        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def CogerCarga(self):
         datos = "14"
         print(f"Enviando datos a Arduino: {datos}")
-        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
         time.sleep(0.5)
-        self.serialArduino.write(datos.encode('utf-8'))
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         time.sleep(0.5)
         pass
 
     def DejarCarga(self):
         datos = "15"
         print(f"Enviando datos a Arduino: {datos}")
-        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
         time.sleep(0.5)
-        self.serialArduino.write(datos.encode('utf-8'))
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         time.sleep(0.5)
         pass
 
@@ -428,8 +447,9 @@ class VentanaAutomatico:
         # Configurar los datos a enviar
         datos = "0,0,0,0"
         print(f"Enviando datos a Arduino: {datos}")
-        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
-        self.serialArduino.write(datos.encode('utf-8'))
+        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
 ########################################################## MODO MANUAL ################################################################################
@@ -450,7 +470,24 @@ class VentanaManual:
         # self.serialArduino = serial.Serial("COM7", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
 
-        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        self.serialArduino = serial.Serial("COM3", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        
+        
+        # try:
+        #     puerto_serial = serial.Serial('COM3', baudrate=115200, timeout=1)  # Ajustar el puerto y parámetros según necesidad
+        # except Exception as e:
+        #     print(f"Error al inicializar la conexión serial: {e}")
+        #     return
+
+        # # Asegurarse de cerrar el puerto si ya está abierto
+        # if puerto_serial.is_open:
+        #     print("Cerrando puerto serial previamente abierto...")
+        #     puerto_serial.close()
+
+        # # Abrir el puerto serial
+        # print("Abriendo puerto serial...")
+        # puerto_serial.open()
+
         print("Ventana de Modo Manual Iniciada")
         master.title("Ventana de Modo Manual Iniciada")
         
@@ -834,72 +871,89 @@ class VentanaManual:
         # Configurar los datos a enviar
         datos = "0,0,0,0"
         print(f"Enviando datos a Arduino: {datos}")
-        self.serialArduino.write(datos.encode('utf-8'))
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Giro_Horario(self, event):
         datos = "0,0,0,0"
         print(f"Enviando datos a Arduino: {datos}")
 
-        self.serialArduino.write(datos.encode('utf-8'))
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Giro_Antihorario(self, event):
         datos = {"20,100,100,100,100"}
-        print(f"Enviando datos a Arduino: {datos}")
+        
 
-        self.serialArduino.write(datos.encode())
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Derecha(self, event):
         datos = "0,0,0,0"
-
+        
         print(f"Enviando datos a Arduino: {datos}")
 
-        self.serialArduino.write(datos.encode())
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Izquierda(self, event):
         datos = "0,0,0,0"
         print(f"Enviando datos a Arduino: {datos}")
-        self.serialArduino.write(datos.encode())
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Adelante(self, event):
-        datos = "0,0,0,0"
-
-        self.serialArduino.write(datos.encode())
+        datos = "20,150,150,150,150\n"
+        print(f"Enviando datos a Arduino: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Atras(self, event):
-        datos = "0,0,0,0"
-
-        self.serialArduino.write(datos.encode())
+        datos = "20,-150,-150,-150,-150\n"
+        print(f"Enviando datos a Arduino: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Superior_IZQ(self, event):
         datos = "0,0,0,0"
-        self.serialArduino.write(datos.encode())
+        print(f"Enviando datos a Arduino: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Superior_DER(self, event):
         datos = "0,0,0,0"
-        self.serialArduino.write(datos.encode())
+        print(f"Enviando datos a Arduino: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Inferior_IZQ(self, event):
         datos = "0,0,0,0"
-        self.serialArduino.write(datos.encode())
+        print(f"Enviando datos a Arduino: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Inferior_DER(self, event):
         datos = "0,0,0,0"
-        self.serialArduino.write(datos.encode())
+        print(f"Enviando datos a Arduino: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def soltar_boton1(self, event):
-        datos = "0,0,0,0"
-        self.serialArduino.write(datos.encode())
+        datos = "20,0,0,0"
+        
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
     ############################################################################################################
     
@@ -1087,7 +1141,8 @@ class VentanaManual:
             datos = "0,0,0,0"
             print(f"Enviando datos: {datos}")
             # Asumiendo que tienes self.serialArduino definido correctamente
-            self.serialArduino.write(datos.encode())
+            mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
     
     def resetear_leds(self):
         # Asumiendo que tienes definidos correctamente canvas1, canvas2, canvas3, led_subir, led_bajar, led_detener
@@ -1124,7 +1179,8 @@ class VentanaManual:
     def enviar_datos2(self, control):
         datos = "0,0,0,0"
         print(f"Enviando datos: {datos}")  # Mensaje de depuración
-        self.serialArduino.write(datos.encode())
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
     ####################################################################################################
 
     def control_led1(self,comando1,led_canvas, led_index1):
@@ -1150,7 +1206,8 @@ class VentanaManual:
     def enviar_datos3(self,estado):
         datos = "0,0,0,0"
         print(f"Enviando datos: {datos}")
-        self.serialArduino.write(datos.encode())
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
     ####################################################################################################
     
@@ -1163,12 +1220,14 @@ class VentanaManual:
         # Aquí puedes modificar la función según tus necesidades
         datos = "0,0,0,0"
         # Suponiendo que `self.serialArduino` está inicializado correctamente
-        self.serialArduino.write(datos.encode())
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
 
     def Leer_Datos(self):
         datos = "0,0,0,0"
 
-        self.serialArduino.write(datos.encode())
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
 ########################################################## Ventana Principal ################################################################################

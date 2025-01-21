@@ -2,7 +2,7 @@ import serial
 import time
 
 # Configurar el puerto y la velocidad de baudios
-port = '/dev/cu.HC-05'
+port = 'COM3'
 baud_rate = 115200
 
 # Inicializar la conexión serial
@@ -14,12 +14,12 @@ except Exception as e:
     exit()
 
 # Mensaje a enviar
-message = "Hola, desde Python!"
+message = "1"
 
 try:
     while True:
         try:
-            # Enviar el mensaje
+            # Enviar el mensaje           
             ser.write(message.encode('utf-8'))
             print(f"Mensaje enviado: {message}")
 
