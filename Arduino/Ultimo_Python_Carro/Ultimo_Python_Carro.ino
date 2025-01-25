@@ -57,13 +57,14 @@ String Dato_movimiento, Dato_velocidad;
 int potPin = A0; // Pin del potenciómetro
 int Distance;
 int maxPosition = 16900;
+int minSpeed = 35;
 
 unsigned long previousMillis = 0; // Almacena el último tiempo de actualización
 const long interval = 500; // Intervalo de 0.5 segundos (500 milisegundos)
 
 int Pisos[] = {
-  80, // Piso 1, altura aproximada 100
-  250, // Piso 1, altura aproximada 100
+  200, // Piso 1, altura aproximada 100
+  260, // Piso 1, altura aproximada 100
   550, // Piso 2, altura aproximada 200
   950, // Piso 3, altura aproximada 300
   // Agrega más pisos según sea necesario
@@ -75,7 +76,8 @@ int Pisos[] = {
 #define PUL 26
 #define motorInterfaceType 1
 
-#define IMAN 38
+#define IMAN 20
+#define LED_PIN 38 
 
 #define SERVO_PIN 13
 #define ENDSTOP 48
@@ -106,7 +108,7 @@ int Distance2;
 
 //// ============= OTROS ===========///
 
-#define LED_PIN 20 
+
 
 // speed
  
@@ -169,8 +171,10 @@ void setup() {
     // Activa la salida
     digitalWrite(ENA, HIGH);
 
+  Bajar(100);
   stepper.setMaxSpeed(3000);
   stepper.setAcceleration(1000);
+  
 
   pinMode(LED_PIN, OUTPUT);  // Configura el pin del relé como salida
   digitalWrite(LED_PIN, LOW);  // Asegúrate de que el relé esté inicialmente apagado
@@ -184,22 +188,22 @@ void setup() {
 
   motor1.setCvLimits(200,0); 
   motor1.setPvLimits(800,0);
-  motor1.setGains(0.5, 0.5, 0.02); // (Kc,Ti,Td)
+  motor1.setGains(0.4, 0.5, 0.02); // (Kc,Ti,Td)
   
   motor2.setCvLimits(200,0); 
   motor2.setPvLimits(800,0);
-  motor2.setGains(0.5, 0.5, 0.02); // (Kc,Ti,Td)
+  motor2.setGains(0.4, 0.5, 0.02); // (Kc,Ti,Td)
 
   motor3.setCvLimits(200,0); 
   motor3.setPvLimits(800,0);
-  motor3.setGains(0.5, 0.5, 0.02); // (Kc,Ti,Td)
+  motor3.setGains(0.4, 0.5, 0.02); // (Kc,Ti,Td)
 
   motor4.setCvLimits(200,0); 
   motor4.setPvLimits(800,0);
-  motor4.setGains(0.5, 0.5, 0.02); // (Kc,Ti,Td)
+  motor4.setGains(0.4, 0.5, 0.02); // (Kc,Ti,Td)
 
 
-
+Detener();
 } 
 
 //====================== BUCLE PRINCIPAL ======================//
@@ -211,48 +215,48 @@ void loop() {
     if (Serial.available())
     {
       strT = Serial.readStringUntil('\n');
-      Serial.println(strT);
+      // Serial.println(strT);
       for (int i = 0; i < dataLengthT; i++)
       {
         int index = strT.indexOf(separatorT);
         datoT[i] = strT.substring(0, index).toInt();
         strT = strT.substring(index + 1);
       }
-      for (int i = 0; i < dataLengthT; i++)
-      {
-        Serial.print("Dato ");
-        Serial.print(i);
-        Serial.print("  =  ");
-        Serial.print(datoT[i]);
-        Serial.print("  -  ");
-      }
-      Serial.println(" ");
+      // for (int i = 0; i < dataLengthT; i++)
+      // {
+      //   Serial.print("Dato ");
+      //   Serial.print(i);
+      //   Serial.print("  =  ");
+      //   Serial.print(datoT[i]);
+      //   Serial.print("  -  ");
+      // }
+      // Serial.println(" ");
     }
 
     if (Serial1.available())
     {
       strT = Serial1.readStringUntil('\n');
-      Serial.println(strT);
+      // Serial.println(strT);
       for (int i = 0; i < dataLengthT; i++)
       {
         int index = strT.indexOf(separatorT);
         datoT[i] = strT.substring(0, index).toInt();
         strT = strT.substring(index + 1);
       }
-      for (int i = 0; i < dataLengthT; i++)
-      {
-        Serial.print("Dato ");
-        Serial.print(i);
-        Serial.print("  =  ");
-        Serial.print(datoT[i]);
-        Serial.print("  -  ");
-      }
-      Serial.println(" ");
+      // for (int i = 0; i < dataLengthT; i++)
+      // {
+      //   Serial.print("Dato ");
+      //   Serial.print(i);
+      //   Serial.print("  =  ");
+      //   Serial.print(datoT[i]);
+      //   Serial.print("  -  ");
+      // }
+      // Serial.println(" ");
     }
 
     /////////////////////////////While Serial1////////////////////////////
 
-    int velocidad = 150;
+    int velocidad = 200;
 
     switch ((int)datoT[0])
     {
@@ -262,12 +266,12 @@ void loop() {
       break;
 
       case 1:
-      Subir(velocidad);
+      Subir(200);
       datoT[0] = 0;
       break;
 
       case 2:
-      Bajar(velocidad);
+      Bajar(100);
       datoT[0] = 0;
       break;
 
@@ -277,7 +281,6 @@ void loop() {
       break;
 
       case 4:
-      // IrPiso(numeroPisoDeseado);
       IrPiso(datoT[1]);
       datoT[0] = 0;
       break;
@@ -320,15 +323,13 @@ void loop() {
       
       case 10:
       delay(10);
-      LedStatus(true);
-      LedStatus(true);
+     
       datoT[0] = 0;
       break;
       
       case 11:
       delay(10);
-      LedStatus(false);
-      LedStatus(false);
+      
       datoT[0] = 0;
       break;
 
@@ -366,7 +367,7 @@ void loop() {
       break;
 
       case 19:
-      Rotate(datoT[1] , 50);
+      Rotate(datoT[1] , 150);
 
       datoT[0] = 0;
       break;
@@ -379,6 +380,12 @@ void loop() {
       DefspeedD= datoT[4];
 
 
+      datoT[0] = 0;
+      break;
+
+      case 21:
+      printAltura();
+      Endstop_Status();
       datoT[0] = 0;
       break;
 
@@ -462,7 +469,7 @@ void IrPiso(int numeroPisoDeseado) {
 
     // Define las velocidades máxima y mínima
     int velocidadMaxima = 250;
-    int velocidadMinima = 150;
+    int velocidadMinima = 175;
 
     // Loop para ajustar la altura hasta llegar al piso deseado
     while (true) {
@@ -693,29 +700,18 @@ double wM4 = 0;
 double wM4ref = 0;
 
 
-// void controlarTodosLosMotores(int vel1, int vel2, int vel3, int vel4) {
-//   int cvM1 = 0, cvM2 = 0, cvM3 = 0, cvM4 = 0;
+void ControlPID(int velocidad, int pol1, int pol2, int pol3, int pol4) {
+  int cvM = 0;
 
-//   // Verifica si la velocidad es cero antes de calcular con PID
-//   if (vel1 != 0) {
-//     cvM1 = motor1.compute(vel1, speedA); // Control PID
-//   }
-//   if (vel2 != 0) {
-//     cvM2 = motor2.compute(vel2, speedB); // Control PID
-//   }
-//   if (vel3 != 0) {
-//     cvM3 = motor3.compute(vel3, speedC); // Control PID
-//   }
-//   if (vel4 != 0) {
-//     cvM4 = motor4.compute(vel4, speedD); // Control PID
-//   }
+  // Calcular el valor del control PID usando solo el motor 1
+  cvM = motor1.compute(velocidad, speedA); // Control PID para el motor 1
 
-//   // Controlar motores con los valores calculados
-//   controlarMotor(cvM1, M1_Dir, M1_Vel, "M1");
-//   controlarMotor(cvM2, M2_Dir, M2_Vel, "M2");
-//   controlarMotor(cvM3, M3_Dir, M3_Vel, "M3");
-//   controlarMotor(cvM4, M4_Dir, M4_Vel, "M4");
-// }
+  // Controlar los motores utilizando el valor calculado y las polaridades
+  controlarMotor(cvM * pol1, M1_Dir, M1_Vel, "M1");
+  controlarMotor(cvM * pol2, M2_Dir, M2_Vel, "M2");
+  controlarMotor(cvM * pol3, M3_Dir, M3_Vel, "M3");
+  controlarMotor(cvM * pol4, M4_Dir, M4_Vel, "M4");
+}
 
 
 void controlarTodosLosMotores(int vel1, int vel2, int vel3, int vel4) {
@@ -790,37 +786,95 @@ void controlarTodosLosMotores(int vel1, int vel2, int vel3, int vel4) {
 
 void CogerCarga() {
     // Mover el accionamiento lineal hasta la posición máxima
-    moveToPosition(PositionMax);
-    delay(100); // Esperar 100 ms
-
-    // Activar el electroimán
-    LedStatus(true);
-    delay(100); // Esperar 100 ms
-
-    // Mover el accionamiento lineal de vuelta a la posición 0
     moveToPosition(0);
     delay(100); // Esperar 100 ms
 
+    // Activar el electroimán
+    ImanStatus(true);
+    delay(100); // Esperar 100 ms
+
+    // Mover el accionamiento lineal de vuelta a la posición 0
+    moveToPosition(PositionMax);
+    delay(100); // Esperar 100 ms
+
     // Desactivar el electroimán
-    LedStatus(false);
+    ImanStatus(false);
     delay(100); // Esperar 100 ms
 }
 
 void DejarCarga() {
     // Activar el electroimán
-    LedStatus(true);
+    ImanStatus(true);
     delay(100); // Esperar 100 ms
     // Mover el accionamiento lineal hasta la posición máxima
-    moveToPosition(PositionMax);
+    moveToPosition(0);
     delay(100); // Esperar 100 ms
     // Mover el accionamiento lineal de vuelta a la posición 0
-    LedStatus(false);
+    ImanStatus(false);
     delay(100); // Esperar 100 ms
-    moveToPosition(0);
+    moveToPosition(PositionMax);
     delay(100); // Esperar 100 ms
     // Desactivar el electroimán
     
 }
+
+// void FrontBack(int position, int Speed)
+// {   
+//     // Inicializa la posición acumulada y la matriz de datos
+//     float PositionTraslation = 0;
+//     int datos[5];
+
+//     // Ajusta la velocidad según la dirección (posición positiva o negativa)
+//     int adjustedSpeed = (position < 0) ? -Speed : Speed;
+
+//     // Controla los motores con la velocidad ajustada
+//     controlarTodosLosMotores(adjustedSpeed, adjustedSpeed, adjustedSpeed, adjustedSpeed);
+//     // ControlPID(adjustedSpeed, 1,1,1,1);
+
+//     // Bucle de control para avanzar o retroceder
+//     while ((position > 0 && PositionTraslation < position) || 
+//            (position < 0 && PositionTraslation > position))
+//     {
+//         if (Serial1.available())
+//         {
+//             strT = Serial1.readStringUntil('\n');
+//             Serial.println(strT);
+//             for (int i = 0; i < dataLengthT; i++)
+//             {
+//                 int index = strT.indexOf(separatorT);
+//                 datos[i] = strT.substring(0, index).toInt();
+//                 strT = strT.substring(index + 1);
+//             }
+//         }
+
+//         if (datos[0] == 100)
+//         {
+//             unsigned long currentMillis = millis();
+
+//             if (currentMillis - previousMillis > sampleTimeW)
+//             {
+//                 previousMillis = currentMillis;
+
+//                 float dVx = rwheel * (datos[1] / 100);
+//                 float dPx = dVx * sampleTimeW / 1000;
+
+//                 // Ajusta la posición acumulada según la dirección
+//                 PositionTraslation += dPx;
+
+//                 Serial.println(PositionTraslation);
+//             }
+//             datos[0] = 0;
+//         }
+//     }
+    
+//     // Detiene los motores y reinicia la posición
+//     if ((position > 0 && PositionTraslation >= position) || 
+//         (position < 0 && PositionTraslation <= position))
+//     {
+//         controlarTodosLosMotores(0, 0, 0, 0);
+//         PositionTraslation = 0;
+//     }
+// }
 
 void FrontBack(int position, int Speed)
 {   
@@ -828,55 +882,78 @@ void FrontBack(int position, int Speed)
     float PositionTraslation = 0;
     int datos[5];
 
-    // Ajusta la velocidad según la dirección (posición positiva o negativa)
-    int adjustedSpeed = (position < 0) ? -Speed : Speed;
-
-    // Controla los motores con la velocidad ajustada
-    controlarTodosLosMotores(adjustedSpeed, adjustedSpeed, adjustedSpeed, adjustedSpeed);
-
+    // Ajusta la dirección de la velocidad según la posición deseada
+    int direction = (position < 0) ? -1 : 1;
+    Speed = abs(Speed); // Aseguramos que Speed es positivo
+    position = abs(position); // Trabajamos con valores absolutos de posición
     // Bucle de control para avanzar o retroceder
-    while ((position > 0 && PositionTraslation < position) || 
-           (position < 0 && PositionTraslation > position))
-    {
-        if (Serial1.available())
-        {
-            strT = Serial1.readStringUntil('\n');
-            Serial.println(strT);
-            for (int i = 0; i < dataLengthT; i++)
-            {
-                int index = strT.indexOf(separatorT);
-                datos[i] = strT.substring(0, index).toInt();
-                strT = strT.substring(index + 1);
-            }
-        }
+      while ((direction > 0 && PositionTraslation < position) || 
+            (direction < 0 && PositionTraslation > -position))
+      {
+          // Leer datos del puerto serie
+          if (Serial1.available())
+          {
+              strT = Serial1.readStringUntil('\n');
+              Serial.println(strT);
+              for (int i = 0; i < dataLengthT; i++)
+              {
+                  int index = strT.indexOf(separatorT);
+                  datos[i] = strT.substring(0, index).toInt();
+                  strT = strT.substring(index + 1);
+              }
+          }
 
-        if (datos[0] == 100)
-        {
-            unsigned long currentMillis = millis();
+          if (datos[0] == 100)
+          {
+              unsigned long currentMillis = millis();
 
-            if (currentMillis - previousMillis > sampleTimeW)
-            {
-                previousMillis = currentMillis;
+              if (currentMillis - previousMillis > sampleTimeW)
+              {
+                  previousMillis = currentMillis;
 
-                float dVx = rwheel * (datos[1] / 100);
-                float dPx = dVx * sampleTimeW / 1000;
+                  // Calcula la velocidad y desplazamiento absolutos
+                  float dVx = rwheel * abs(datos[1] / 100); // Toma el valor absoluto de datos[1]
+                  float dPx = dVx * sampleTimeW / 1000;
 
-                // Ajusta la posición acumulada según la dirección
-                PositionTraslation += dPx;
+                  // Ajusta la posición acumulada según la dirección del movimiento
+                  PositionTraslation += dPx * direction;
 
-                Serial.println(PositionTraslation);
-            }
-            datos[0] = 0;
-        }
-    }
-    
-    // Detiene los motores y reinicia la posición
-    if ((position > 0 && PositionTraslation >= position) || 
-        (position < 0 && PositionTraslation <= position))
-    {
-        controlarTodosLosMotores(0, 0, 0, 0);
-        PositionTraslation = 0;
-    }
+                  // Calcula la velocidad relativa al progreso total
+                  float absPosition = abs(PositionTraslation); // Usa posición absoluta para las verificaciones
+                  float speedFactor = 0;
+
+                  if (absPosition <= position * 0.5) // Primera mitad del movimiento
+                  {
+                      speedFactor = absPosition / (position * 0.5); // Incremento lineal
+                  }
+                  else // Segunda mitad del movimiento
+                  {
+                      speedFactor = (position - absPosition) / (position * 0.5); // Decremento lineal
+                  }
+
+                  // Asegura que la velocidad se encuentra entre minSpeed y Speed
+                  int adjustedSpeed = minSpeed + (Speed - minSpeed) * speedFactor;
+                  adjustedSpeed *= direction; // Aplica la dirección para el control del motor
+
+                  // Controla los motores con la velocidad ajustada
+                  controlarTodosLosMotores(adjustedSpeed, adjustedSpeed, adjustedSpeed, adjustedSpeed);
+
+                  // Mensajes de depuración
+                  Serial.print("Position: ");
+                  Serial.print(PositionTraslation);
+                  Serial.print(" Speed: ");
+                  Serial.println(adjustedSpeed);
+              }
+
+              // Resetea el indicador de datos leídos
+              datos[0] = 0;
+          }
+      }
+
+      // Detener los motores y reiniciar la posición
+      controlarTodosLosMotores(0, 0, 0, 0);
+      PositionTraslation = 0;
+
 }
 
 
@@ -886,72 +963,213 @@ void LeftRight(int position, int Speed)
     float PositionTraslation = 0;
     int datos[5];
 
-    // Ajusta la velocidad según la dirección (posición positiva o negativa)
-    int adjustedSpeed = (position < 0) ? -Speed : Speed;
-
-    // Controla los motores con la velocidad ajustada
-    controlarTodosLosMotores(adjustedSpeed, -adjustedSpeed, adjustedSpeed, -adjustedSpeed);
-
+    // Ajusta la dirección de la velocidad según la posición deseada
+    int direction = (position < 0) ? -1 : 1;
+    Speed = abs(Speed); // Aseguramos que Speed es positivo
+    position = abs(position); // Trabajamos con valores absolutos de posición
     // Bucle de control para avanzar o retroceder
-    while ((position > 0 && PositionTraslation < position) || 
-           (position < 0 && PositionTraslation > position))
-    {
-        if (Serial1.available())
-        {
-            strT = Serial1.readStringUntil('\n');
-            Serial.println(strT);
-            for (int i = 0; i < dataLengthT; i++)
-            {
-                int index = strT.indexOf(separatorT);
-                datos[i] = strT.substring(0, index).toInt();
-                strT = strT.substring(index + 1);
-            }
-        }
+      while ((direction > 0 && PositionTraslation < position) || 
+            (direction < 0 && PositionTraslation > -position))
+      {
+          // Leer datos del puerto serie
+          if (Serial1.available())
+          {
+              strT = Serial1.readStringUntil('\n');
+              Serial.println(strT);
+              for (int i = 0; i < dataLengthT; i++)
+              {
+                  int index = strT.indexOf(separatorT);
+                  datos[i] = strT.substring(0, index).toInt();
+                  strT = strT.substring(index + 1);
+              }
+          }
 
-        if (datos[0] == 100)
-        {
-            unsigned long currentMillis = millis();
+          if (datos[0] == 100)
+          {
+              unsigned long currentMillis = millis();
 
-            if (currentMillis - previousMillis > sampleTimeW)
-            {
-                previousMillis = currentMillis;
+              if (currentMillis - previousMillis > sampleTimeW)
+              {
+                  previousMillis = currentMillis;
 
-                float dVx = rwheel * (datos[1] / 100);
-                float dPx = dVx * sampleTimeW / 1000;
+                  // Calcula la velocidad y desplazamiento absolutos
+                  float dVx = rwheel * (datos[1] / 100); // Toma el valor absoluto de datos[1]
+                  float dPx = dVx * sampleTimeW / 1000;
 
-                // Ajusta la posición acumulada según la dirección
-                PositionTraslation += dPx;
+                  // Ajusta la posición acumulada según la dirección del movimiento
+                  PositionTraslation += dPx;
 
-                Serial.println(PositionTraslation);
-            }
-            datos[0] = 0;
-        }
-    }
-    
-    // Detiene los motores y reinicia la posición
-    if ((position > 0 && PositionTraslation >= position) || 
-        (position < 0 && PositionTraslation <= position))
-    {
-        controlarTodosLosMotores(0, 0, 0, 0);
-        PositionTraslation = 0;
-    }
+                  // Calcula la velocidad relativa al progreso total
+                  float absPosition = abs(PositionTraslation); // Usa posición absoluta para las verificaciones
+                  float speedFactor = 0;
+
+                  if (absPosition <= position * 0.5) // Primera mitad del movimiento
+                  {
+                      speedFactor = absPosition / (position * 0.5); // Incremento lineal
+                  }
+                  else // Segunda mitad del movimiento
+                  {
+                      speedFactor = (position - absPosition) / (position * 0.5); // Decremento lineal
+                  }
+
+                  // Asegura que la velocidad se encuentra entre minSpeed y Speed
+                  int adjustedSpeed = minSpeed + (Speed - minSpeed) * speedFactor;
+                  adjustedSpeed *= direction; // Aplica la dirección para el control del motor
+
+                  // Controla los motores con la velocidad ajustada
+                  controlarTodosLosMotores(adjustedSpeed, -adjustedSpeed, adjustedSpeed, -adjustedSpeed);
+
+                  // Mensajes de depuración
+                  Serial.print("Position: ");
+                  Serial.print(PositionTraslation);
+                  Serial.print(" Speed: ");
+                  Serial.println(adjustedSpeed);
+              }
+
+              // Resetea el indicador de datos leídos
+              datos[0] = 0;
+          }
+      }
+
+      // Detener los motores y reiniciar la posición
+      controlarTodosLosMotores(0, 0, 0, 0);
+      PositionTraslation = 0;
+
 }
+
+// void LeftRight(int position, int Speed)
+// {   
+//     // Inicializa la posición acumulada y la matriz de datos
+//     float PositionTraslation = 0;
+//     int datos[5];
+
+//     // Ajusta la velocidad según la dirección (posición positiva o negativa)
+//     int adjustedSpeed = (position < 0) ? -Speed : Speed;
+
+//     // Controla los motores con la velocidad ajustada
+//     // controlarTodosLosMotores(adjustedSpeed, -adjustedSpeed, adjustedSpeed, -adjustedSpeed);
+//     ControlPID(adjustedSpeed, 1,-1,1,-1);
+
+//     // Bucle de control para avanzar o retroceder
+//     while ((position > 0 && PositionTraslation < position) || 
+//            (position < 0 && PositionTraslation > position))
+//     {
+//         if (Serial1.available())
+//         {
+//             strT = Serial1.readStringUntil('\n');
+//             Serial.println(strT);
+//             for (int i = 0; i < dataLengthT; i++)
+//             {
+//                 int index = strT.indexOf(separatorT);
+//                 datos[i] = strT.substring(0, index).toInt();
+//                 strT = strT.substring(index + 1);
+//             }
+//         }
+
+//         if (datos[0] == 100)
+//         {
+//             unsigned long currentMillis = millis();
+
+//             if (currentMillis - previousMillis > sampleTimeW)
+//             {
+//                 previousMillis = currentMillis;
+
+//                 float dVx = rwheel * (datos[1] / 100);
+//                 float dPx = dVx * sampleTimeW / 1000;
+
+//                 // Ajusta la posición acumulada según la dirección
+//                 PositionTraslation += dPx;
+
+//                 Serial.println(PositionTraslation);
+//             }
+//             datos[0] = 0;
+//         }
+//     }
+    
+//     // Detiene los motores y reinicia la posición
+//     if ((position > 0 && PositionTraslation >= position) || 
+//         (position < 0 && PositionTraslation <= position))
+//     {
+//         controlarTodosLosMotores(0, 0, 0, 0);
+//         PositionTraslation = 0;
+//     }
+// }
+
+// void Rotate(int angle, int Speed)
+// {
+//     float rotationAngle = 0; // Ángulo acumulado
+//     int datos[5];            // Matriz para almacenar los datos recibidos
+
+//     // Ajusta la velocidad según la dirección (rotación horaria o antihoraria)
+//     int adjustedSpeed = (angle < 0) ? Speed : -Speed;
+
+//     // Controla los motores para rotar (direcciones opuestas en pares de motores)
+//     // controlarTodosLosMotores(-adjustedSpeed, adjustedSpeed, adjustedSpeed, -adjustedSpeed);
+//     ControlPID(adjustedSpeed, -1,1,1,-1);
+
+//     // Bucle de control para realizar la rotación
+//     while ((angle > 0 && rotationAngle < angle) || 
+//            (angle < 0 && rotationAngle > angle))
+//     {
+//         if (Serial1.available())
+//         {
+//             strT = Serial1.readStringUntil('\n');
+//             Serial.println(strT);
+//             for (int i = 0; i < dataLengthT; i++)
+//             {
+//                 int index = strT.indexOf(separatorT);
+//                 datos[i] = strT.substring(0, index).toInt();
+//                 strT = strT.substring(index + 1);
+//             }
+//         }
+
+//         if (datos[0] == 100)
+//         {
+//             unsigned long currentMillis = millis();
+
+//             if (currentMillis - previousMillis > sampleTimeW)
+//             {
+//                 previousMillis = currentMillis;
+
+//                 // Calcula la variación de ángulo (dW)
+//                 float dWp = rwheel*(((datos[1] - datos[2] - datos[3] + datos[4]) / 100.0) / (4*(Lx + Ly))) ;
+//                 // float dWp = rwheel*(((-datos[1] + datos[2] + datos[3] - datos[4]) / 100.0) / (4*(Lx + Ly))) ;
+//                 float dW = dWp* sampleTimeW / 1000;
+//                 float degree = dW*(180/3.1416);
+
+//                 // Acumula el ángulo calculado
+//                 rotationAngle += degree;
+
+//                 Serial.println(rotationAngle);
+//             }
+//             datos[0] = 0;
+//         }
+//     }
+
+//     // Detiene los motores y reinicia el ángulo
+//     if ((angle > 0 && rotationAngle >= angle) || 
+//         (angle < 0 && rotationAngle <= angle))
+//     {
+//         controlarTodosLosMotores(0, 0, 0, 0);
+//         rotationAngle = 0;
+//     }
+// }
 
 void Rotate(int angle, int Speed)
 {
     float rotationAngle = 0; // Ángulo acumulado
     int datos[5];            // Matriz para almacenar los datos recibidos
 
-    // Ajusta la velocidad según la dirección (rotación horaria o antihoraria)
-    int adjustedSpeed = (angle < 0) ? Speed : -Speed;
-
-    // Controla los motores para rotar (direcciones opuestas en pares de motores)
-    controlarTodosLosMotores(-adjustedSpeed, adjustedSpeed, adjustedSpeed, -adjustedSpeed);
+    // Determina la dirección de la rotación
+    int direction = (angle < 0) ? -1 : 1;
+    Speed = abs(Speed); // Aseguramos que Speed sea positivo
+    angle = abs(angle); // Trabajamos con el valor absoluto del ángulo
 
     // Bucle de control para realizar la rotación
-    while ((angle > 0 && rotationAngle < angle) || 
-           (angle < 0 && rotationAngle > angle))
+    while ((direction > 0 && rotationAngle < angle) || 
+           (direction < 0 && rotationAngle > -angle))
     {
+        // Leer datos del puerto serie
         if (Serial1.available())
         {
             strT = Serial1.readStringUntil('\n');
@@ -973,26 +1191,56 @@ void Rotate(int angle, int Speed)
                 previousMillis = currentMillis;
 
                 // Calcula la variación de ángulo (dW)
-                float dWp = rwheel*(((datos[1] - datos[2] - datos[3] + datos[4]) / 100.0) / (4*(Lx + Ly))) ;
-                // float dWp = rwheel*(((-datos[1] + datos[2] + datos[3] - datos[4]) / 100.0) / (4*(Lx + Ly))) ;
-                float dW = dWp* sampleTimeW / 1000;
-                float degree = dW*(180/3.1416);
+                float dWp = rwheel * (((datos[1]) / 100.0) / ((Lx + Ly)));
+                float dW = dWp * sampleTimeW / 1000;
+                float degree = dW * (180 / 3.1416);
 
                 // Acumula el ángulo calculado
                 rotationAngle += degree;
 
-                Serial.println(rotationAngle);
+                // Calcula la velocidad relativa al progreso total
+                float absRotation = abs(rotationAngle); // Usa ángulo absoluto para las verificaciones
+                float speedFactor = 0;
+
+                if (absRotation <= angle * 0.5) // Primera mitad de la rotación
+                {
+                    speedFactor = absRotation / (angle * 0.5); // Incremento lineal
+                }
+                else // Segunda mitad de la rotación
+                {
+                    speedFactor = (angle - absRotation) / (angle * 0.5); // Decremento lineal
+                }
+
+                // Asegura que la velocidad se encuentra entre minSpeed y Speed
+                int adjustedSpeed = minSpeed + (Speed - minSpeed) * speedFactor;
+                adjustedSpeed *= direction; // Aplica la dirección para el control del motor
+
+                // Controla los motores para realizar la rotación
+                controlarTodosLosMotores(adjustedSpeed, -adjustedSpeed, -adjustedSpeed, adjustedSpeed);
+
+                // Mensajes de depuración
+                Serial.print("Rotation Angle: ");
+                Serial.print(rotationAngle);
+                Serial.print(" Speed: ");
+                Serial.println(adjustedSpeed);
             }
             datos[0] = 0;
         }
     }
 
     // Detiene los motores y reinicia el ángulo
-    if ((angle > 0 && rotationAngle >= angle) || 
-        (angle < 0 && rotationAngle <= angle))
-    {
-        controlarTodosLosMotores(0, 0, 0, 0);
-        rotationAngle = 0;
-    }
+    controlarTodosLosMotores(0, 0, 0, 0);
+    rotationAngle = 0;
 }
+
+
+void Endstop_Status() {
+  int estadoEndstop = digitalRead(ENDSTOP); // Lee el valor del endstop
+
+  if (estadoEndstop == HIGH) {
+    Serial.println("ENDSTOP ACTIVADO");
+  } else {
+    Serial.println("ENDSTOP DESACTIVADO");
+  }
+  }
 

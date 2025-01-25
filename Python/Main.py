@@ -31,7 +31,7 @@ from Aruco_Medicion_Distancia import PIDController
 
 import serial
 
-
+direccionCamera = "http://192.168.1.7/640x480.mjpeg"
 
 
 ##########################################  Variables #########################################
@@ -41,27 +41,20 @@ errorescajamesa1=1
 
 ########################################################## MODO AUTOMATICO ################################################################################
 
-mqtt_server = "192.168.192.34"
+mqtt_server = "192.168.1.5"
 mqtt_port = 1883
+
+puertoBT = 'COM3'
 
 
 class VentanaAutomatico:
     def __init__(self, master):
 
-        try:
-            puerto_serial = serial.Serial('COM3', baudrate=9600, timeout=1)  # Ajustar el puerto y parámetros según necesidad
-        except Exception as e:
-            print(f"Error al inicializar la conexión serial: {e}")
-            return
-
-        # Asegurarse de cerrar el puerto si ya está abierto
-        if puerto_serial.is_open:
-            print("Cerrando puerto serial previamente abierto...")
-            puerto_serial.close()
-
         # Abrir el puerto serial
         print("Abriendo puerto serial...")
-        puerto_serial.open()
+        self.serialArduino = serial.Serial(puertoBT, 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+      
         
         self.master = master
         master.title("Ventana de Modo Automaticó Iniciada")
@@ -72,9 +65,7 @@ class VentanaAutomatico:
         
         # Crear la instancia de Tk
         
-        self.serialArduino = serial.Serial("COM3", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
-        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
-        
+         
         self.velocidad = 100 
 
         # Crear la instancia de la clase VentanaAutomatico y pasarle la instancia de Tk
@@ -207,7 +198,6 @@ class VentanaAutomatico:
 
     #Funcion al procesar el boton de inicio
     def Validaciones_Inicio(self):
-        # AccionesRobot = PIDController(0.01, 0.01, 0.1 , 200, 0)
         
         #Cambio de color del primer circulo referencial como led
         self.master.after(0, lambda: self.cambiar_color(0, "red"))
@@ -218,52 +208,71 @@ class VentanaAutomatico:
         
         
         self.Existe_caja = int(funciones_complementarias.Validacion_Caja_Mesa()) #Funcion para la validacion de la caja
-        # print("SELF.EXISTECAJA RESULTADO:")
-        print("Existe Caja?")
-        print(self.Existe_caja)
-        # print(f"Valor recibido: {self.Existe_caja}")
-        # print(f"Tipo de valor recibido: {type(self.Existe_caja)}")
-        # time.sleep(2)
-        print("Existe Casillero?")
-        self.Existe_Casillero =  int(funciones_complementarias.Validar_Casilleros_Disponibles())
-        print(self.Existe_Casillero)
-        
-        
-        time.sleep(2)
-        lector = QRLector()
-        print("Esperando detección de código QR...")
-        
 
+        print("Existe Caja?")
+        if self.Existe_caja == 0:
+            print("No se encontró caja.")
+        elif self.Existe_caja == 1:
+            print("Sí se encontró caja.")
+        else:
+            print("Valor desconocido para Existe_caja.")
+
+        time.sleep(2)
+        
+        
         if self.Existe_caja == 1:
-            message = " " * 10 + "PRECAUCIÓN\n\nROBOT EN MOVIMIENTO"
             # Mostrar el cuadro de advertencia de inicio de movimiento del robot
+            message = " " * 10 + "PRECAUCIÓN\n\nROBOT EN MOVIMIENTO"
             messagebox.showwarning("Advertencia", message, icon="warning", parent=self.master)
+
+            self.MoverDis(50,10)
+            self.GirarGrados(90,10)
+
             print("Detectamos caja y pasamos a enviar atributos")
-            # funciones_complementarias.Enviar_atributos("Robot","Inicio",True) #Enviamos los atributos a thingsboard sobre que el tema Inicio con el atributo TRUE para llevar el monitoreo en thingsboard
             funciones_complementarias.publish_message("robot/estado", "TRUE")
             self.label_estado.config(text="Iniciando proceso, tenga cuidado con el robot de MesaCaja")  # Actualiza el texto del Label
-            Objetivo_Aruco = 1 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
+            Objetivo_Aruco = 0 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
             Verificador_Aruco = False #Inicializamos verificacion aruco en false
             while Verificador_Aruco == False:
                 print("Entro en el while para buscar el aruco de MesaCaja")
                 Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco) #Llamamos a la funcion para la busqueda del aruco
             
-            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco) #Llamamos a la funcion de estimacion para empezar con la navegacion  
-            # MOVIMIENTO DE ACCIONAMIENTO DE CAJA
-            self.CogerCarga()
-            time.sleep(10)
-            #LLama a la Funcion de Detección de QR
+            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco, self.serialArduino) #Llamamos a la funcion de estimacion para empezar con la navegacion  
+            
+            #LECTURA DE CODIGO QR
 
-            datos_mensaje = lector.procesar_codigo_qr()
+            print("Esperando detección de código QR...")   
+            lector = QRLector()
+            #LLama a la Funcion de Detección de QR
+            datos_mensaje = lector.procesar_codigo_qr(direccionCamera)
             print(datos_mensaje)
             #VALIDACION DE REPISAS
-            self.Existe_Casillero =  int(funciones_complementarias.Validar_Casilleros_Disponibles())
+            # Extraer la celda de los datos
+            celda = datos_mensaje.get("Celda")
+
+            # Determinar la columna a partir del código de celda
+            columna = determinar_columna(celda)
+
+            # Validar que la columna esté dentro del rango permitido (1, 2 o 3)
+            if not isinstance(columna, int) or columna not in [1, 2, 3]:
+                print("ERROR: Columna inválida en los datos. Debe ser un entero entre 1 y 3.")
+                self.Existe_Casillero = 0  # Indica que no se encontró un casillero válido
+            else:
+                # Validación de repisas
+                self.Existe_Casillero = int(funciones_complementarias.Validar_Casilleros_Disponibles(columna))
             
+            print(f"SE VALIDO LA INFORMACION DE LA CAJA, Y HAY DISPONIBILIDAD EN LA COLUMNA:{columna}")
+
+            # MOVIMIENTO DE ACCIONAMIENTO DE CAJA
+            self.CogerCarga()
+            time.sleep(20)
+
             #GIRO PROGRAMADO PARA ORIENTACION
-            self.MoverPor(-100,5)
-            self.GirarPor("Giro_Horario",10)
+            self.MoverDis(-50,5)
+            self.GirarGrados(180,10)
+            self.MoverDis(100,5)
             
-            Objetivo_Aruco = 0 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
+            Objetivo_Aruco = columna #asignamos el aruco objetivo ya que el aruco ID 0 corresponde al la mesa donde estara la caja
             while Verificador_Aruco == False:
                 print("Entro en el while para buscar el aruco de Repisas")
                 Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco) #Llamamos a la funcion para la busqueda del aruco
@@ -272,43 +281,91 @@ class VentanaAutomatico:
             self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco) #Llamamos a la funcion de estimacion para empezar con la navegacion  
             
 
-            #IR A LA REPISA
+            # IR A LA REPISA
             if self.Existe_Casillero != 0:
-                print(f"Mover hasta repisa {self.Existe_Casillero}")
-                
-                # Llamar a la función adecuada basada en el número de repisa
-                if self.Existe_Casillero == 1:
+                print(f"Mover hasta casillero {self.Existe_Casillero}")
+
+                # Determinar el piso basado en el número del casillero
+                if self.Existe_Casillero in [1, 4, 7]:
                     print("Moviendo al piso A")
-                    self.ir_piso(1)
-                elif self.Existe_Casillero == 2:
+                    self.ir_piso(1)  # Piso A
+                elif self.Existe_Casillero in [2, 5, 8]:
                     print("Moviendo al piso B")
-                    self.ir_piso(2)
-                elif self.Existe_Casillero == 3:
+                    self.ir_piso(2)  # Piso B
+                elif self.Existe_Casillero in [3, 6, 9]:
                     print("Moviendo al piso C")
-                    self.ir_piso(3)
+                    self.ir_piso(3)  # Piso C
                 else:
-                    print("Número de repisa no válido.")
+                    print("Número de casillero no válido.")
             else:
-                print("No hay repisa disponible.")
+                print("No hay casillero disponible.")
 
-            print(f"Esperar 10 segundos hasta llegar al Piso")
-            time.sleep(10)
+            print(f"Esperar 20 segundos hasta llegar al Piso")
+            time.sleep(20)
             self.DejarCarga()
+            print(f"Esperar 30 segundos hasta dejar la carga")
+            time.sleep(30)
 
-            self.MoverPor(-100,5)
-            self.GirarPor("Giro_Horario",20)
+            self.MoverDis(-50,5)
+            self.GirarGrados(180,20)
 
-            self.MoverPor(100,5)
-            self.GirarPor("Giro_Horario",10)
+            self.MoverDis(50,5)
+            self.GirarGrados(90,10)
 
+
+            #IR AL HOME
+
+            Objetivo_Aruco = 4  #asignamos el aruco objetivo ya que el aruco ID 0 corresponde al la mesa donde estara la caja
+            while Verificador_Aruco == False:
+                print("Entro en el while para buscar el aruco de Repisas")
+                Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco) #Llamamos a la funcion para la busqueda del aruco
+            print("Salio del while para buscar el aruco de Repisas")
+              
+            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco) #Llamamos a la funcion de estimacion para empezar con la navegacion  
             
             funciones_complementarias.publish_message("robot/estado", "FALSE") #Al final del proceso enviamos False para el monitoreo y decir que se finalizo el proceso de clasificacion de la caja
+        
         elif self.Existe_caja == 0: #Si no existe la caja se ejecuta esta funcion y se muestra un mensaje de alerta
             print("No existe Caja")
             self.label_estado.config(text="NO EXISTE CAJA PARA INICIAR EL PROCESO, PONGA UNA CAJA Y LUEGO PRESIONE INICIO")  # Actualiza el texto del Label
             funciones_complementarias.publish_message("robot/estado", "FALSE")
             messagebox.showwarning("Advertencia", "NO EXISTE CAJA PARA INICIAR EL PROCESO, PONGA UNA CAJA Y LUEGO PRESIONE INICIO", icon="warning", parent=self.master)
-            
+
+#Funcion  Determina la columna correspondiente en función del código de celda.
+
+    def determinar_columna(celda):
+        """
+        Determina la columna correspondiente en función del código de celda.
+
+        Args:
+            celda (str): Código de la celda (ejemplo: 'C01', 'C05', 'C09').
+
+        Returns:
+            int: Número de columna (1, 2 o 3). Retorna 0 si el código no es válido.
+        """
+        try:
+            # Validar el formato del código de celda
+            if not celda.startswith("C") or len(celda) != 3:
+                print("ERROR: Código de celda inválido. Debe comenzar con 'C' y tener 3 caracteres.")
+                return 0
+
+            # Extraer el número de la celda
+            numero_celda = int(celda[1:])  # Convertir el segundo y tercer carácter a entero
+
+            # Determinar la columna según el número de celda
+            if numero_celda in [1, 4, 7]:
+                return 1  # Columna 1
+            elif numero_celda in [2, 5, 8]:
+                return 2  # Columna 2
+            elif numero_celda in [3, 6, 9]:
+                return 3  # Columna 3
+            else:
+                print("ERROR: Número de celda fuera de rango. Debe estar entre 1 y 9.")
+                return 0
+        except ValueError:
+            print("ERROR: Formato de celda inválido. Asegúrese de que el código contiene un número válido.")
+            return 0
+
         
 #Funcion para identificar los arucos y buscar el aruvo objetivo a ser buscado
 
@@ -319,7 +376,7 @@ class VentanaAutomatico:
         parameters = cv2.aruco.DetectorParameters()
         aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
         # cap = cv2.VideoCapture(0) # Iniciar captura desde la cámara (cambiar el número si tienes varias cámaras)
-        rtsp_url = "rtsp://admin:L28E4E11@192.168.192.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+        rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
         cap = cv2.VideoCapture(rtsp_url)
         detected_ids = set()  # Usamos un conjunto para evitar duplicados de IDs detectados
         
@@ -381,9 +438,9 @@ class VentanaAutomatico:
 
     
 
-    def GirarPor(self, direccion, tiempo):
-        print(f"Girando en dirección {direccion} por {tiempo} segundos...")
-        datos = "0,0,0,0"
+    def GirarGrados(self, grados, tiempo):
+        print(f"Girando {grados} grados por {tiempo} segundos...")
+        datos = f"19,{grados},0,0"
         try:
     
             mensaje_con_salto = datos + "\n"
@@ -401,9 +458,9 @@ class VentanaAutomatico:
         canvas.itemconfig(ovalo, fill=color)
 
 
-    def MoverPor(self, velocidad, tiempo):
-        print(f"Girando a velocidad {velocidad} por {tiempo} segundos...")
-        datos = "0,0,0,0,0"
+    def MoverDis(self, distancia, tiempo):
+        print(f"Girando a  {distancia} cm por {tiempo} segundos")
+        datos = f"17,{distancia},0,0,0"
         try:
             mensaje_con_salto = datos + "\n"
             self.serialArduino.write(mensaje_con_salto.encode())
@@ -470,23 +527,8 @@ class VentanaManual:
         # self.serialArduino = serial.Serial("COM7", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
 
-        self.serialArduino = serial.Serial("COM3", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        self.serialArduino = serial.Serial(puertoBT, 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         
-        
-        # try:
-        #     puerto_serial = serial.Serial('COM3', baudrate=115200, timeout=1)  # Ajustar el puerto y parámetros según necesidad
-        # except Exception as e:
-        #     print(f"Error al inicializar la conexión serial: {e}")
-        #     return
-
-        # # Asegurarse de cerrar el puerto si ya está abierto
-        # if puerto_serial.is_open:
-        #     print("Cerrando puerto serial previamente abierto...")
-        #     puerto_serial.close()
-
-        # # Abrir el puerto serial
-        # print("Abriendo puerto serial...")
-        # puerto_serial.open()
 
         print("Ventana de Modo Manual Iniciada")
         master.title("Ventana de Modo Manual Iniciada")
@@ -869,88 +911,84 @@ class VentanaManual:
     def ir_piso(self):
         piso_valor = self.niveles.index(self.valor.get()) # Obtener el índice numérico de la selección
         # Configurar los datos a enviar
-        datos = "0,0,0,0"
+        datos = "4," + str(piso_valor) 
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Giro_Horario(self, event):
-        datos = "0,0,0,0"
+        datos = "20,100,-100,-100,100"
         print(f"Enviando datos a Arduino: {datos}")
-
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Giro_Antihorario(self, event):
-        datos = {"20,100,100,100,100"}
-        
-
+        datos = "20,-100,100,100,-100"
+        print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Derecha(self, event):
-        datos = "0,0,0,0"
-        
+        datos = "20,100,-100,100,-100"
         print(f"Enviando datos a Arduino: {datos}")
-
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Izquierda(self, event):
-        datos = "0,0,0,0"
+        datos = "20,-100,100,-100,100"
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Adelante(self, event):
-        datos = "20,150,150,150,150\n"
+        datos = "20,100,100,100,100"
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Atras(self, event):
-        datos = "20,-150,-150,-150,-150\n"
+        datos = "20,-100,-100,-100,-100"
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Superior_IZQ(self, event):
-        datos = "0,0,0,0"
+        datos = "20,0,100,0,100"
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Superior_DER(self, event):
-        datos = "0,0,0,0"
+        datos = "20,100,0,100,0"
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Inferior_IZQ(self, event):
-        datos = "0,0,0,0"
+        datos = "20,-100,0,-100,0"
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def Diagonal_Inferior_DER(self, event):
-        datos = "0,0,0,0"
+        datos = "20,0,-100,0,-100"
         print(f"Enviando datos a Arduino: {datos}")
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass
 
     def soltar_boton1(self, event):
-        datos = "20,0,0,0"
+        datos = "20,0,0,0,0"
         
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
@@ -980,13 +1018,13 @@ class VentanaManual:
 
         try:
             if self.valor0.get() == self.camaras[1]:
-                ip_cam_url = "http://192.168.11.85/640x480.mjpeg"
+                ip_cam_url = direccionCamera
                 self.stream_active.set()  # Marca el stream como activo
                 self.stream_thread = threading.Thread(target=self.stream_video, args=(ip_cam_url,))
                 self.stream_thread.start()
 
             elif self.valor0.get() == self.camaras[2]:
-                rtsp_url = "rtsp://admin:L28E4E11@192.168.192.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+                rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
                 self.cap = cv2.VideoCapture(rtsp_url)
 
                 if self.cap.isOpened():
@@ -1128,12 +1166,27 @@ class VentanaManual:
     
     def Subir_Tijereta(self):
         self.Estado("SUBIR", "subir")
+        datos = "1"
+        print(f"Enviando datos: {datos}")
+        # Asumiendo que tienes self.serialArduino definido correctamente
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
     
     def Detener_Tijereta(self):
         self.Estado("DETENER", "detener")
+        datos = "3"
+        print(f"Enviando datos: {datos}")
+        # Asumiendo que tienes self.serialArduino definido correctamente
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
     
     def Bajar_Tijereta(self):
         self.Estado("BAJAR", "bajar")
+        datos = "2"
+        print(f"Enviando datos: {datos}")
+        # Asumiendo que tienes self.serialArduino definido correctamente
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
     
     def enviar_datos(self, movimiento):
         piso = self.valor.get()  # Asumiendo que tienes self.valor definido correctamente
@@ -1142,7 +1195,7 @@ class VentanaManual:
             print(f"Enviando datos: {datos}")
             # Asumiendo que tienes self.serialArduino definido correctamente
             mensaje_con_salto = datos + "\n"
-        self.serialArduino.write(mensaje_con_salto.encode())
+            self.serialArduino.write(mensaje_con_salto.encode())
     
     def resetear_leds(self):
         # Asumiendo que tienes definidos correctamente canvas1, canvas2, canvas3, led_subir, led_bajar, led_detener
@@ -1164,17 +1217,29 @@ class VentanaManual:
             self.ultimo_control = None
         
         if comando != self.ultimo_control:  # Verificar si es un comando diferente al último enviado
-            self.enviar_datos2(comando)
+            # self.enviar_datos2(comando)
             self.ultimo_control = comando  # Actualizar el último comando enviado
 
     def Inicio(self):
         self.control_led("INICIO", self.canvas4, 0)
+        datos = "14"
+        print(f"Enviando datos: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
 
     def Home(self):
         self.control_led("HOME", self.canvas5, 1)
+        datos = "5"
+        print(f"Enviando datos: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
 
     def Final(self):
         self.control_led("FIN", self.canvas6, 2)
+        datos = "15"
+        print(f"Enviando datos: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
 
     def enviar_datos2(self, control):
         datos = "0,0,0,0"
@@ -1194,14 +1259,22 @@ class VentanaManual:
             self.ultimo_control = None
         
         if comando1 != self.ultimo_control:  # Verificar si es un comando diferente al último enviado
-            self.enviar_datos3(comando1)
+            # self.enviar_datos3(comando1)
             self.ultimo_control = comando1  # Actualizar el último comando enviado
 
     def Encender(self):
         self.control_led1("ENCENDER_IMAN", self.canvas7, 0)
+        datos = "8"
+        print(f"Enviando datos: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
     
     def Apagar(self):
         self.control_led1("APAGAR_IMAN", self.canvas8, 1)
+        datos = "9"
+        print(f"Enviando datos: {datos}")
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
     
     def enviar_datos3(self,estado):
         datos = "0,0,0,0"
@@ -1214,18 +1287,16 @@ class VentanaManual:
     def angle(self):
         # Obtener el valor actual del slider y limpiar cualquier carácter de nueva línea
         angleData = str(self.slider.get()).strip()
-        self.enviar_datos4(angleData)
-
-    def enviar_datos4(self, Angulo):
-        # Aquí puedes modificar la función según tus necesidades
-        datos = "0,0,0,0"
+        datos = "12,"+angleData+",0,0,0"
+        print(f"Enviando datos: {datos}")
         # Suponiendo que `self.serialArduino` está inicializado correctamente
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
 
-    def Leer_Datos(self):
-        datos = "0,0,0,0"
+       
 
+    def Leer_Datos(self):
+        datos = "13,0,0,0"
         mensaje_con_salto = datos + "\n"
         self.serialArduino.write(mensaje_con_salto.encode())
         pass

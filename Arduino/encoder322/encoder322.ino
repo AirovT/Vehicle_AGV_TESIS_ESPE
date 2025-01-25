@@ -31,29 +31,29 @@ float rpm_A = 0;
 float rpm_B = 0;
 
 ////MOTOR A
-int DT_pin_A = 25;
-int CLK_pin_A = 33;
+int DT_pin_A = 39;
+int CLK_pin_A = 34;
  
 ////MOTOR B
-int DT_pin_B = 32;
-int CLK_pin_B = 35;
+int DT_pin_B = 35;
+int CLK_pin_B = 32;
 
 
 ////MOTOR C
-int DT_pin_C = 26;
-int CLK_pin_C = 27;
+int DT_pin_C = 33;
+int CLK_pin_C = 25;
 
 ////MOTOR D
-int DT_pin_D = 34;
-int CLK_pin_D = 39;
+int DT_pin_D = 26;
+int CLK_pin_D = 27;
 
 
 unsigned long lastTimeVelocidad = 0;  // Último tiempo para cálculo de velocidades
 unsigned long lastTimeImpresion = 0;  // Último tiempo para impresión de velocidades
 unsigned long lastTimeImpresion2 = 0;  // Último tiempo para impresión de velocidades
 
-const unsigned long sampleTimeVelocidad = 50; // Tiempo de muestreo para velocidades (ms)
-const unsigned long sampleTimeImpresion = 50; // Tiempo de muestreo para impresión (ms)
+const unsigned long sampleTimeVelocidad = 100; // Tiempo de muestreo para velocidades (ms)
+const unsigned long sampleTimeImpresion = 1000; // Tiempo de muestreo para impresión (ms)
 const unsigned long sampleTimeEnvio = 250  ; // Tiempo de muestreo para impresión (ms)
 
 
@@ -71,7 +71,6 @@ void setup(){
 ////LECTURA ENCODER MOTOR A
   pinMode(DT_pin_A , INPUT);
   pinMode(CLK_pin_A , INPUT);
-//  attachInterrupt(digitalPinToInterrupt(DT_pin_A), interrupt_on_pulse_A, RISING);// RISING DE 0 A 1
   attachInterrupt(DT_pin_A, interrupt_on_pulse_A, CHANGE);// RISING DE 0 A 1
   attachInterrupt(CLK_pin_A, interrupt_on_pulse_A, CHANGE);// RISING DE 0 A 1
 
@@ -133,9 +132,7 @@ void loop(){
     }
   }
 
-  // calcularVelocidad(sampleTimeVelocidad);
-
-  // imprimirVelocidades(sampleTimeImpresion);
+  imprimirVelocidades(sampleTimeImpresion);
   EnviarVelocidad(sampleTimeEnvio);
   
   unsigned long currentTime = millis();
@@ -164,10 +161,6 @@ void loop(){
     }
     lastTimeVelocidad = currentTime; // Actualizar último tiempo
   }
-
-  
-  
-
 }
 
 void interrupt_on_pulse_A() {
@@ -189,7 +182,10 @@ void interrupt_on_pulse_A() {
   if(antR == 3 && actR ==1) encoder_value_A++;
   if(antR == 0 && actR ==2) encoder_value_A++;
   if(antR == 2 && actR ==3) encoder_value_A++;
-  n[0]=encoder_value_A;      
+  n[0]=encoder_value_A;
+  // Serial.print("Contador A = ");
+  // Serial.println(encoder_value_A);     
+  
 }
 
 void interrupt_on_pulse_B() {

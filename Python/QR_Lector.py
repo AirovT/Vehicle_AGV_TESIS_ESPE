@@ -6,30 +6,40 @@ from io import BytesIO
 import paho.mqtt.client as mqtt
 import json
 import time
+import os
 
 # Diccionarios para almacenar datos
-diccionarioCiudades = {"AM": "Ambato", "QU": "Quito", "GU": "Guayaquil"}
-diccionarioNombres = {"JT": "Jairo Torres", "DP": "Diego Pinta", "AM": "Angie Macias"}
-diccionariocedulas = {"0354": "1803645447", "5045": "1150574517", "0092": "2200189278"}
+diccionarioProductos = {
+    "MT01": "Martillo Metalico", 
+    "MT02": "Martillo Goma", 
+    "ST01": "Estilete Plastico", 
+    "DX01": "Destornillador Estrella", 
+    "DI01": "Destornillador Plano", 
+    "DI02": "Dest-Plano Madera"
+}
 
 class QRLector:
     def __init__(self):
-        # URL de la cámara IP
-        self.video_source = 'http://192.168.192.80/640x480.jpg'
-        
         # Configuración MQTT
-        mqtt_server_ip = "192.168.192.34"
+        mqtt_server_ip = "192.168.1.5"
         self.mqtt_server_ip = mqtt_server_ip
         self.client = mqtt.Client()
         self.client.connect(self.mqtt_server_ip)
         self.client.loop_start()  # Iniciar el bucle de red para manejar las publicaciones
 
-    def procesar_codigo_qr(self):
+    def procesar_codigo_qr(self, video_source):
         print("Iniciando el procesamiento de código QR...")
+
+        # Verificar si el video_source es una imagen PNG o un flujo de video
+        if os.path.isfile(video_source) and video_source.endswith(".png"):
+            self.procesar_imagen(video_source)
+        else:
+            self.procesar_video(video_source)
+
+    def procesar_video(self, video_source):
         while True:
             try:
-                # Obtener el flujo de video desde la cámara IP
-                response = requests.get(self.video_source, stream=True)
+                response = requests.get(video_source, stream=True)
                 response.raise_for_status()  # Verificar si la solicitud fue exitosa
                 bytes_data = BytesIO(response.content)
                 byte_frame = bytes_data.getvalue()
@@ -50,9 +60,8 @@ class QRLector:
                 if decoded_objects:
                     for obj in decoded_objects:
                         qr_data = obj.data.decode('utf-8')
-                        if len(qr_data) == 14:
-                            print("Código QR detectado:", qr_data)
-                            datos = self.separacion(qr_data)
+                        datos = self.separacion(qr_data)
+                        if datos:
                             self.publicar_datos(datos)  # Publicar los datos en MQTT
                             time.sleep(5)
                             cv2.destroyAllWindows()  # Cerrar la ventana cuando se detecta un código QR válido
@@ -68,44 +77,68 @@ class QRLector:
             except Exception as e:
                 print(f"Error inesperado: {e}")
 
-    cv2.destroyAllWindows()  # Asegurarse de cerrar la ventana en caso de error o salida
+        cv2.destroyAllWindows()  # Asegurarse de cerrar la ventana en caso de error o salida
+
+    def procesar_imagen(self, imagen_path):
+        try:
+            qr_imagen = cv2.imread(imagen_path)
+            if qr_imagen is None:
+                print("No se pudo cargar la imagen")
+                return
+
+            decoded_objects = decode(qr_imagen)
+            if decoded_objects:
+                for obj in decoded_objects:
+                    qr_data = obj.data.decode('utf-8')
+                    datos = self.separacion(qr_data)
+                    if datos:
+                        self.publicar_datos(datos)  # Publicar los datos en MQTT
+                        return datos  # Retornar los datos procesados
+            else:
+                print("No se detectó ningún código QR en la imagen.")
+
+        except Exception as e:
+            print(f"Error al procesar la imagen: {e}")
 
     def separacion(self, qr_data):
-        verciudad = qr_data[:2]
-        vermotor = qr_data[2:4]
-        verrpm = qr_data[4:8]
-        verinicialn = qr_data[8:10]
-        vercedula = qr_data[10:14]
+        if len(qr_data) != 14:
+            print("Error: El código QR no tiene el tamaño esperado de 14 caracteres.")
+            return None
 
-        ciudad = diccionarioCiudades.get(verciudad, "Desconocida")
-        nombre = diccionarioNombres.get(verinicialn, "Desconocido")
-        cedula = diccionariocedulas.get(vercedula, "Cédula desconocida")
+        ID = qr_data[:3]
+        Separador1 = qr_data[3:5]
+        ProductoCodigo = qr_data[5:9]
+        Separador2 = qr_data[9:11]
+        Celda = qr_data[11:14]
+
+        # Validación de separadores
+        if Separador1 != "AA" or Separador2 != "BB":
+            print("Error: Los separadores no coinciden con los valores esperados.")
+            return None
+
+        Producto = diccionarioProductos.get(ProductoCodigo, "Producto desconocido")
 
         datos = {
-            "Ciudad": ciudad,
-            "Motor": vermotor,
-            "RPM": verrpm,
-            "Nombre": nombre,
-            "Cédula": cedula
+            "ID": ID,
+            "Producto": Producto,
+            "Celda": Celda
         }
-        time.sleep(0.1)
-        print("DATOS:", datos)
+
+        print("DATOS PROCESADOS:", datos)
         return datos
 
     def publicar_datos(self, datos):
         for clave, valor in datos.items():
             topic = f"InformacionBox/{clave}"
-            mensaje_json = json.dumps({"valor": valor})
             try:
-                self.client.publish(topic, mensaje_json)
-                print(f"Publicado en {topic}: {mensaje_json}")
+                self.client.publish(topic, valor)
+                print(f"Publicado en {topic}: {valor}")
             except Exception as e:
                 print(f"Error al publicar en {topic}: {e}")
             time.sleep(0.1)  # Añadir una pequeña pausa para evitar problemas de publicación
 
-
-
-# Crear instancia de QRLector con la IP del servidor MQTT y procesar códigos QR
-
-# lector = QRLector()
-# lector.procesar_codigo_qr()
+# Ejemplo de uso
+lector = QRLector()
+# lector.procesar_codigo_qr('http://192.168.1.7/640x480.jpg')  # Desde cámara IP
+# lector.procesar_codigo_qr('codigo_qr.png')  # Desde un archivo PNG
+# lector.procesar_codigo_qr('http://192.168.1.11:4747/video')  # Desde cámara IP/

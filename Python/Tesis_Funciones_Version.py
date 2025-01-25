@@ -60,7 +60,7 @@ class Funciones_Complementarias:
         estados = []
         try:
             # Esperar hasta que se reciban los mensajes de todos los sensores
-            sensores = ["/sensores/presencia1", "/sensores/presencia2", "/sensores/presencia3"]
+            sensores = ["/sensores/presencia1", "/sensores/presencia2", "/sensores/presencia3", "/sensores/presencia4", "/sensores/presencia5", "/sensores/presencia6", "/sensores/presencia7", "/sensores/presencia8", "/sensores/presencia9"]
             while not all(sensor in self.last_message for sensor in sensores):
                 print(f"Esperando mensajes: {self.last_message}")  # Depuración
                 time.sleep(0.1)  # Esperar un corto período para evitar uso excesivo de CPU
@@ -85,27 +85,47 @@ class Funciones_Complementarias:
             return estados
 
 
-    def Validar_Casilleros_Disponibles(self):
+    def Validar_Casilleros_Disponibles(self, columna):
+        """
+        Verifica los casilleros disponibles dentro de la columna indicada.
+
+        Args:
+            columna (int): Número de columna (1, 2 o 3).
+
+        Returns:
+            int: El número del casillero más cercano disponible dentro de la columna correspondiente
+                (o 0 si no hay casilleros disponibles en esa columna).
+        """
+        # Obtener los estados de los casilleros
         estados = self.Validacion_Repisas()
-
-        # Convertir los estados a enteros, si aún no lo son
-        estados = [int(estado) for estado in estados]
         
-        # Imprimir los estados de los sensores
+        # Verificar que columna esté dentro de un rango válido
+        if columna not in [1, 2, 3]:
+            print("ERROR: Columna fuera de rango (debe ser 1, 2 o 3)")
+            return 0
+
+        # Determinar el rango de casilleros para la columna correspondiente
+        inicio = (columna - 1) * 3  # Índice inicial de la columna (0, 3, 6)
+        fin = inicio + 3            # Índice final de la columna (3, 6, 9)
+        rango_casilleros = range(inicio, fin)  # Ejemplo: range(0, 3)
+
+        # Verificar los casilleros disponibles en el rango correspondiente
+        casilleros_disponibles = [
+            i + 1 for i in rango_casilleros if estados[i] == 0
+        ]
+
+        # Imprimir los estados y los casilleros disponibles
         print(f"Estados de los sensores: {estados}")
+        print(f"Casilleros disponibles en columna {columna}: {casilleros_disponibles}")
 
-        # Verifica si hay algún casillero disponible
-        casilleros_disponibles = [i + 1 for i, estado in enumerate(estados) if estado == 0]  # Estado 0 indica disponible
-
-        print(f"Casilleros disponibles: {casilleros_disponibles}")
-
+        # Verificar si hay casilleros disponibles en la columna
         if not casilleros_disponibles:
-            print("ERROR SIN DISPOSICION DE CASILLEROS")
-            return 0  # Retorna 0 si no hay casilleros disponibles
+            print(f"ERROR: No hay casilleros disponibles en la columna {columna}")
+            return 0
 
-        # Retorna el casillero más cercano disponible
-        casillero_mas_cercano = min(casilleros_disponibles)
-        return casillero_mas_cercano
+        # Retornar el casillero más cercano disponible dentro del rango
+        return min(casilleros_disponibles)
+
 
 
 

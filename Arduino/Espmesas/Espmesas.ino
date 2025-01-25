@@ -6,15 +6,15 @@ const char* ssid = "CarBox";
 const char* password = "Espe2024*";
 
 // Configuración del broker MQTT
-const char* mqtt_server = "192.168.192.34"; // Dirección IP del broker MQTT
+const char* mqtt_server = "192.168.1.5"; // Dirección IP del broker MQTT
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 // Pines de los sensores de presencia
-const int sensorPins[] = {5, 4, 0}; // Ejemplo de pines D1, D2, D3
-const int numSensors = 3;
-int lastSensorStates[] = {-1, -1, -1}; // Estados anteriores de los sensores, inicializados en valores imposibles
+const int sensorPins[] = {16, 5, 4, 0,2,14,12,13,15}; // Ejemplo de pines D1, D2, D3
+const int numSensors = 9;
+int lastSensorStates[] = {-1, -1, -1,-1, -1, -1,-1, -1, -1}; // Estados anteriores de los sensores, inicializados en valores imposibles
 
 void setup() {
   Serial.begin(115200);

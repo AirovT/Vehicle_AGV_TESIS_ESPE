@@ -17,10 +17,13 @@ logging.basicConfig(level=logging.INFO)
 
 counter = 0
 
+Puerto_BT = 'COM3'
+
 # Funcion para calculas la estimacion de la distancia con respecto del aruco y la camara, se envia el ID objetivo
 #ID objetivo corresponde al que vamos a buscar
-def Estimation(ID_Objetivo):
-
+def Estimation(ID_Objetivo, BTPort):
+    pid = PIDController(0.01, 0.01, 0.1 , 200, 0)
+    pid.Conectar_Blu_Auto(BTPort)
     # Función para verificar si una matriz es una matriz de rotación válida
     coordenadas = [0,0,0,0]
     
@@ -61,11 +64,11 @@ def Estimation(ID_Objetivo):
     aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
 
     # cap = cv2.VideoCapture(0)  # Inicializar captura de vídeo desde la dirección
-    rtsp_url = "rtsp://admin:L28E4E11@192.168.192.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+    rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
     cap = cv2.VideoCapture(rtsp_url)  # Inicializa la captura desde la cámara RTSP
     cap.set(3, 640)  # Establecer el ancho del fotograma de la cámara
     cap.set(4, 480)  # Establecer el alto del fotograma de la cámara
-    pid = PIDController(0.01, 0.01, 0.1 , 200, 0)
+    
     counter = 0
     Posicionado = False
     Acercado = False
@@ -119,11 +122,10 @@ def Estimation(ID_Objetivo):
             print(f"Filtrado: x={x_filtrado}, y={y_filtrado}, z={z_filtrado}, yaw={yaw_filtrado}")
 
             if Posicionado == False:
-                pid.Conectar_Blu_Auto()
+                
                 Posicionado = pid.Posicionamiento(x_filtrado, yaw_filtrado)
 
             if Acercado == False:
-                pid.Conectar_Blu_Auto()
                 Acercado = pid.AvanzarHasta(10)
 
             # coordenadas = [x, y, z, yaw] #guardamos en coordanadas los datos en una lista
@@ -252,6 +254,7 @@ class PIDController:
         self.setpoint_X = setpoint_X
         self.prev_error_Z = self.prev_error_X = 0
         self.integral_Z = self.integral_X = 0
+        self.serialArduino = None  # El objeto serial será configurado después.
 
 
         # self.mqtt_broker = "192.168.11.34"  # Cambiar a la dirección IP del servidor de thingsboard
@@ -357,19 +360,26 @@ class PIDController:
         self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
     
     #Funcion para concetar bluetooth mediante el puerto bluetooth de mi pc
-    def Conectar_Blu_Auto(self):
-        # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
-        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
-        inicio = True
-        return inicio
-        pass
+    def Conectar_Blu_Auto(self, PortserialBT):
+        """
+        Configura el puerto Bluetooth usando el objeto pasado desde el Main.
+        :param PortserialBT: Objeto serial ya inicializado desde el Main.
+        """
+        if not PortserialBT or not PortserialBT.is_open:
+            raise ValueError("El puerto Bluetooth proporcionado no es válido o está cerrado.")
+        
+        # Asigna el puerto ya configurado
+        self.serialArduino = PortserialBT
+        print(f"Conexión configurada correctamente con el puerto: {self.serialArduino.port}")
+        
     
     def Posicionamiento(self, x_, yaw_a):
         # Validación y ajuste de yaw
         if abs(yaw_a) > 15:
             direccion_giro = "Horario" if x_ > 0 else "AntiHorario"
             print(f"Girando {direccion_giro} para ajustar yaw")
-            self.GiroRobot(direccion_giro, 50)
+            self.GiroRobot(direccion_giro, yaw_a)
+            time.sleep(5)
             return False  # Yaw no está ajustado aún
 
         # Solo validar y ajustar x si la validación de yaw es positiva
@@ -377,87 +387,81 @@ class PIDController:
             # Validación y ajuste de x
             if abs(x_) > 200:
                 direccion_desplazar = "Izquierda" if x_ > 0 else "Derecha"
-                print(f"Desplazando hacia {direccion_desplazar} para ajustar posición en x")
-                self.Desplazar(direccion_desplazar, 100)
+                print(f"Desplazando {x_}, hacia {direccion_desplazar} para ajustar posición en x")
+                self.Desplazar(direccion_desplazar, x_)
+                time.sleep(5)
                 return False  # Posición en x no está ajustada aún
 
         # Si ambas condiciones se cumplen, regresar True
         print("Posicionamiento completado correctamente")
         return True
 
-    def GiroRobot(self, Direccion, Velocidad):
+    def GiroRobot(self, Direccion, yaw_a):
             if Direccion == "Horario":
                 print("GIRO HORARIO")
-                self.W1 = Velocidad
-                self.W2 = -Velocidad
-                self.W3 = Velocidad
-                self.W4 = -Velocidad
+                data = f"19,{yaw_a}"
+               
+               
             elif Direccion == "AntiHorario":
 
                 print("GIRO ANTIHORARIO")
-                self.W1 = -Velocidad
-                self.W2 = Velocidad
-                self.W3 = -Velocidad
-                self.W4 = Velocidad
+                data = f"19,-{yaw_a}"
+                
+                
             else:
                 print("Dirección no válida. Use 'Horario' o 'AntiHorario'.")
                 return
 
-            # Imprimir los valores de las variables individuales para ver qué sale
-            print("Valor de W1:", self.W1)
-            print("Valor de W2:", self.W2)
-            print("Valor de W3:", self.W3)
-            print("Valor de W4:", self.W4)
             print("AQUI SE ENVIA A LOS MOTORES")
             
             # Aquí debes agregar la lógica para enviar los valores a los motores
-            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+            self.Enviar_arduino_blu(data) #funcion para envio de datos por bluetooth
 
-    def GiroRobotTime(self, Direccion, Velocidad, Duracion):
-            if Direccion == "Horario":
-                print("GIRO HORARIO")
-                self.W1 = Velocidad
-                self.W2 = -Velocidad
-                self.W3 = Velocidad
-                self.W4 = -Velocidad
-            elif Direccion == "AntiHorario":
+    # def GiroRobotTime(self, Direccion, Velocidad, Duracion):
+    #         if Direccion == "Horario":
+    #             print("GIRO HORARIO")
+    #             self.W1 = Velocidad
+    #             self.W2 = -Velocidad
+    #             self.W3 = Velocidad
+    #             self.W4 = -Velocidad
+    #         elif Direccion == "AntiHorario":
 
-                print("GIRO ANTIHORARIO")
-                self.W1 = -Velocidad
-                self.W2 = Velocidad
-                self.W3 = -Velocidad
-                self.W4 = Velocidad
-            else:
-                print("Dirección no válida. Use 'Horario' o 'AntiHorario'.")
-                return
+    #             print("GIRO ANTIHORARIO")
+    #             self.W1 = -Velocidad
+    #             self.W2 = Velocidad
+    #             self.W3 = -Velocidad
+    #             self.W4 = Velocidad
+    #         else:
+    #             print("Dirección no válida. Use 'Horario' o 'AntiHorario'.")
+    #             return
 
-            # Imprimir los valores de las variables individuales para ver qué sale
-            print("Valor de W1:", self.W1)
-            print("Valor de W2:", self.W2)
-            print("Valor de W3:", self.W3)
-            print("Valor de W4:", self.W4)
-            print("AQUI SE ENVIA A LOS MOTORES")
+    #         # Imprimir los valores de las variables individuales para ver qué sale
+    #         print("Valor de W1:", self.W1)
+    #         print("Valor de W2:", self.W2)
+    #         print("Valor de W3:", self.W3)
+    #         print("Valor de W4:", self.W4)
+    #         print("AQUI SE ENVIA A LOS MOTORES")
 
-            time.sleep(Duracion)
+    #         time.sleep(Duracion)
             
-            # Aquí debes agregar la lógica para enviar los valores a los motores
-            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+    #         # Aquí debes agregar la lógica para enviar los valores a los motores
+    #         self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
 
-            self.W1 = 0
-            self.W2 = 0
-            self.W3 = 0
-            self.W4 = 0
+    #         self.W1 = 0
+    #         self.W2 = 0
+    #         self.W3 = 0
+    #         self.W4 = 0
 
 
-            # Imprimir los valores de las variables individuales para ver qué sale
-            print("Valor de W1:", self.W1)
-            print("Valor de W2:", self.W2)
-            print("Valor de W3:", self.W3)
-            print("Valor de W4:", self.W4)
-            print("AQUI SE ENVIA A LOS MOTORES")
+    #         # Imprimir los valores de las variables individuales para ver qué sale
+    #         print("Valor de W1:", self.W1)
+    #         print("Valor de W2:", self.W2)
+    #         print("Valor de W3:", self.W3)
+    #         print("Valor de W4:", self.W4)
+    #         print("AQUI SE ENVIA A LOS MOTORES")
             
-            # Aquí debes agregar la lógica para enviar los valores a los motores
-            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+    #         # Aquí debes agregar la lógica para enviar los valores a los motores
+    #         self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
 
 
     def Avanzar(self, Direccion, Velocidad):
@@ -487,33 +491,22 @@ class PIDController:
             # Aquí debes agregar la lógica para enviar los valores a los motores
             self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
 
-    def Desplazar(self, Direccion, Velocidad):
+    def Desplazar(self, Direccion, Distancia):
             if Direccion == "Derecha":
                 print("DESPLAZAR DERECHA")
-                self.W1 = Velocidad
-                self.W2 = -Velocidad
-                self.W3 = -Velocidad
-                self.W4 = Velocidad
+                data = f"18,{Distancia}"
             elif Direccion == "Izquierda":
                 print("DESPLAZAR IZQUIERDA")
-                self.W1 = -Velocidad
-                self.W2 = Velocidad
-                self.W3 = Velocidad
-                self.W4 = -Velocidad
+                data = f"18,-{Distancia}"
+                
             else:
                 print("Dirección no válida. Use 'Derecha' o 'Izquierda'.")
                 return
-
-            # Imprimir los valores de las variables individuales para ver qué sale
             
-            print("Valor de W1:", self.W1)
-            print("Valor de W2:", self.W2)
-            print("Valor de W3:", self.W3)
-            print("Valor de W4:", self.W4)
             print("AQUI SE ENVIA A LOS MOTORES")
             
             # Aquí debes agregar la lógica para enviar los valores a los motores
-            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+            self.Enviar_arduino_blu(data) #funcion para envio de datos por bluetooth
 
 
         
@@ -523,8 +516,9 @@ class PIDController:
             
             # Llama a la función para enviar datos por Bluetooth
             # Suponiendo que 'Funcion' es 'Avanzar' y 'Param' es 'posicion'
-            self.Enviar_arduino_blu2(Funcion='Avanzar', Param=posicion)
-            
+            # self.Enviar_arduino_blu2(Funcion='Avanzar', Param=posicion)
+            data = f"17,{posicion}"
+            self.Enviar_arduino_blu(data)
             # Si ambas condiciones se cumplen, regresar True    
             print("Posicionamiento completado correctamente")
             return True
@@ -532,35 +526,20 @@ class PIDController:
 
         
         #Funcion de envio de datos mediante bluetooth
-    def Enviar_arduino_blu(self):
-            #data corresponde a un diccionario
-            data = {
-                "Modo" : "Auto",
-                "m1_vel": self.W1,
-                "m2_vel": self.W2,
-                "m3_vel": self.W3,
-                "m4_vel": self.W4,
-                }
-            # Convertir el diccionario a una cadena JSON
-            json_data = json.dumps(data)
-            # Enviar la cadena JSON a Arduino a través del puerto serie
-            self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
-            self.serialArduino.write(json_data.encode())
-            time.sleep(0.5)
-            pass
+    def Enviar_arduino_blu(self, datos):
+        """
+        Envía datos al Arduino conectado por Bluetooth.
+        :param datos: Datos a enviar (string).
+        """
+        if not self.serialArduino or not self.serialArduino.is_open:
+            raise ConnectionError("No hay conexión activa con el dispositivo Bluetooth.")
 
-    def Enviar_arduino_blu2(self, Funcion, Param):
-            #data corresponde a un diccionario
-            data = {
-                "Modo" : "Auto",
-                "Dato_movimiento": Funcion,
-                "Dato_velocidad": Param
-                }
-            # Convertir el diccionario a una cadena JSON
-            json_data = json.dumps(data)
-            # Enviar la cadena JSON a Arduino a través del puerto serie
-            self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
-            self.serialArduino.write(json_data.encode())
-            time.sleep(0.5)
-            pass
+        try:
+            mensaje_con_salto = datos + "\n"  # Agrega el salto de línea
+            self.serialArduino.write(mensaje_con_salto.encode())  # Envía datos al puerto
+            print(f"Datos enviados: {datos}")
+        except Exception as e:
+            print(f"Error al enviar datos: {e}")
+            raise
+
 
