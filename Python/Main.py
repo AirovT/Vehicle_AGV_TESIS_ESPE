@@ -34,17 +34,17 @@ import serial
 direccionCamera = "http://192.168.1.7/640x480.mjpeg"
 
 
-##########################################  Variables #########################################
+##########################################  Variables #########################################z   
 valoranteriorcajamesa1 = 3
 cajavalormesa1 = 4
 errorescajamesa1=1
 
 ########################################################## MODO AUTOMATICO ################################################################################
 
-mqtt_server = "192.168.1.5"
+mqtt_server = "192.168.1.9"
 mqtt_port = 1883
-
-puertoBT = 'COM3'
+ 
+puertoBT = 'COM13'
 
 
 class VentanaAutomatico:
@@ -66,7 +66,8 @@ class VentanaAutomatico:
         # Crear la instancia de Tk
         
          
-        self.velocidad = 100 
+        self.velocidad = 100
+        self.BANDERA = False
 
         # Crear la instancia de la clase VentanaAutomatico y pasarle la instancia de Tk
         # Iniciar el bucle de eventos de Tkinter
@@ -194,7 +195,38 @@ class VentanaAutomatico:
         self.label_estado = tk.Label(master, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         self.label_estado.pack(side=tk.BOTTOM, fill=tk.X)
 
-##################################### FINAL DE INTERFAZ GRAFICA ###################################################
+        # Configurar el hilo para recibir datos del serial
+        self.thread = threading.Thread(target=self.leer_datos_serial)
+        self.thread.daemon = True  # El hilo se detendrá cuando se cierre la ventana principal
+        self.thread.start()
+
+##################################### FUNCIONES MODO AUTOMATICO ###################################################
+
+
+    def leer_datos_serial(self):
+        while True:
+            if self.serialArduino.in_waiting > 0:
+                mensaje = self.serialArduino.readline().decode().strip()
+                print("Mensaje recibido:", mensaje)
+                
+                # Procesar el mensaje recibido
+                self.procesar_mensaje(mensaje)
+            else:
+                # Puedes ajustar el tiempo de espera o implementar otra lógica según tu necesidad
+                pass
+
+    def procesar_mensaje(self, mensaje):
+        # Simular el procesamiento del mensaje como lo harías en Arduino
+        partes = mensaje.split(",")
+        if partes[0] == "150" and len(partes) >= 2:
+            if partes[1] == "1":  # Asegurar que partes[1] es una cadena si mensaje es cadena
+                self.BANDERA = True
+            elif partes[1] == "0":
+                self.BANDERA = False
+            
+        else:
+            # Mensaje no reconocido
+            print("Mensaje no reconocido AUTO:", mensaje)
 
     #Funcion al procesar el boton de inicio
     def Validaciones_Inicio(self):
@@ -217,7 +249,7 @@ class VentanaAutomatico:
         else:
             print("Valor desconocido para Existe_caja.")
 
-        time.sleep(2)
+        # time.sleep(2)
         
         
         if self.Existe_caja == 1:
@@ -225,13 +257,13 @@ class VentanaAutomatico:
             message = " " * 10 + "PRECAUCIÓN\n\nROBOT EN MOVIMIENTO"
             messagebox.showwarning("Advertencia", message, icon="warning", parent=self.master)
 
-            self.MoverDis(50,10)
+            self.MoverDis(50,10,self.BANDERA)
             self.GirarGrados(90,10)
 
             print("Detectamos caja y pasamos a enviar atributos")
             funciones_complementarias.publish_message("robot/estado", "TRUE")
             self.label_estado.config(text="Iniciando proceso, tenga cuidado con el robot de MesaCaja")  # Actualiza el texto del Label
-            Objetivo_Aruco = 0 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
+            Objetivo_Aruco = 1 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
             Verificador_Aruco = False #Inicializamos verificacion aruco en false
             while Verificador_Aruco == False:
                 print("Entro en el while para buscar el aruco de MesaCaja")
@@ -268,9 +300,9 @@ class VentanaAutomatico:
             time.sleep(20)
 
             #GIRO PROGRAMADO PARA ORIENTACION
-            self.MoverDis(-50,5)
+            self.MoverDis(-50,5,self.BANDERA)
             self.GirarGrados(180,10)
-            self.MoverDis(100,5)
+            self.MoverDis(100,5,self.BANDERA)
             
             Objetivo_Aruco = columna #asignamos el aruco objetivo ya que el aruco ID 0 corresponde al la mesa donde estara la caja
             while Verificador_Aruco == False:
@@ -306,11 +338,11 @@ class VentanaAutomatico:
             print(f"Esperar 30 segundos hasta dejar la carga")
             time.sleep(30)
 
-            self.MoverDis(-50,5)
+            self.MoverDis(-50,5,self.BANDERA)
             self.GirarGrados(180,20)
 
             self.MoverDis(50,5)
-            self.GirarGrados(90,10)
+            self.GirarGrados(90,10,self.BANDERA)
 
 
             #IR AL HOME
@@ -458,17 +490,46 @@ class VentanaAutomatico:
         canvas.itemconfig(ovalo, fill=color)
 
 
-    def MoverDis(self, distancia, tiempo):
-        print(f"Girando a  {distancia} cm por {tiempo} segundos")
-        datos = f"17,{distancia},0,0,0"
-        try:
-            mensaje_con_salto = datos + "\n"
-            self.serialArduino.write(mensaje_con_salto.encode())
-            print("Datos enviados a Arduino:", datos)
-        except Exception as e:
-            print(f"Error al enviar datos a Arduino: {e}")
-        pass
-        time.sleep(tiempo)
+    # def MoverDis(self, distancia, tiempo):
+    #     print(f"Girando a  {distancia} cm por {tiempo} segundos")
+    #     datos = f"17,{distancia},0,0,0"
+    #     try:
+    #         mensaje_con_salto = datos + "\n"
+    #         self.serialArduino.write(mensaje_con_salto.encode())
+    #         print("Datos enviados a Arduino:", datos)
+    #     except Exception as e:
+    #         print(f"Error al enviar datos a Arduino: {e}")
+    #     pass
+    #     time.sleep(tiempo)
+
+    import time
+
+import time
+
+def MoverDis(self, distancia, tiempo, BANDERA):
+    print(f"Girando a {distancia} cm por {tiempo} segundos")
+    datos = f"17,{distancia},0,0,0"
+    
+    try:
+        mensaje_con_salto = datos + "\n"
+        self.serialArduino.write(mensaje_con_salto.encode())
+        print("Datos enviados a Arduino:", datos)
+    except Exception as e:
+        print(f"Error al enviar datos a Arduino: {e}")
+        return
+
+    # Esperar hasta que BANDERA sea True o el tiempo expire
+    start_time = time.time()
+    while not BANDERA:
+        if time.time() - start_time >= tiempo:
+            print("Tiempo expirado, el robot no completó la tarea.")
+            break
+        time.sleep(0.1)  # Espera breve para evitar bloquear el procesador
+
+    if BANDERA:
+        print("El robot completó la tarea exitosamente.")
+
+
 
 
     def Girar(self):
@@ -514,7 +575,7 @@ class VentanaAutomatico:
 class VentanaManual:
     def __init__(self, master):
         self.master = master
-        master.overrideredirect(True)
+        #master.overrideredirect(True)
         self.master.geometry("1366x768")
         self.master.resizable(width=False, height=False)
 
@@ -673,13 +734,13 @@ class VentanaManual:
         self.boton22 = tk.Button(self.Posicion2, text="MEDIR",font=("Arial", 10, "bold"), width=10,height=Valto, command=self.Leer_Datos)
         self.boton22.grid(row=1,column=0,sticky='w')
 
-        Label(self.Posicion2, text = "ULTRASONICO 1:", font=("Arial",10, "bold")).grid(row=2,column=0,sticky='w')
+        Label(self.Posicion2, text = "DISTANCIA 1:", font=("Arial",10, "bold")).grid(row=2,column=0,sticky='w')
 
         # Crear una caja de texto
         self.caja1 = Text(self.Posicion2, wrap=tk.WORD, width=7, height=1, font=("Arial", 12))
         self.caja1.grid(row=2,column=1,pady=10)
 
-        Label(self.Posicion2,text = "ULTRASONICO 2:", font=("Arial", 10, "bold")).grid(row=3,column=0,sticky='w')
+        Label(self.Posicion2,text = "DISTANCIA 2:", font=("Arial", 10, "bold")).grid(row=3,column=0,sticky='w')
 
         # Crear una caja de texto
         self.caja2 = Text(self.Posicion2, wrap=tk.WORD, width=7, height=1, font=("Arial", 12))
@@ -735,7 +796,7 @@ class VentanaManual:
         Label(self.Posicion4, text = "CONTROL DEL MICROSERVO",font=("Arial",12,"bold")).grid(row=0,column=3,columnspan=3,padx=20,pady=10,sticky='w')
 
         #Crear un slider para controlar la rotacion de un microservo
-        self.slider = Scale(self.Posicion4, from_=0, to=90, orient=HORIZONTAL, length=300, showvalue=True, tickinterval=10)
+        self.slider = Scale(self.Posicion4, from_=90, to=0, orient=HORIZONTAL, length=300, showvalue=True, tickinterval=10)
         self.slider.grid(row=1, column=3, columnspan=3, padx=20)
         
         # Botón para setear el ángulo
@@ -885,7 +946,7 @@ class VentanaManual:
     def procesar_mensaje(self, mensaje):
         # Simular el procesamiento del mensaje como lo harías en Arduino
         partes = mensaje.split(",")
-        if partes[0] == "100" and len(partes) >= 3:
+        if partes[0] == "133" and len(partes) >= 3:
             # Mensaje de alturas
             distance1 = partes[1]
             distance2 = partes[2]

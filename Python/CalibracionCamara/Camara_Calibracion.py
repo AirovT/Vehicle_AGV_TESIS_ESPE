@@ -22,7 +22,7 @@ objp = objp * size_of_chessboard_squares_mm
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-images = glob.glob('Calibracion/*.png')
+images = glob.glob('Calibracion2.0/*.png')
 
 for image in images:
 
@@ -88,7 +88,13 @@ load_and_print_pickle(ruta3)
 
 ############## UNDISTORTION #####################################################
 
-img = cv.imread('Calibracion/image43.png')
+img = cv.imread('Calibracion/cali5.png')
+
+if img is None:
+    print("❌ ERROR: No se pudo abrir la imagen. Verifica la ruta y que el archivo existe.")
+    exit()
+
+
 h,  w = img.shape[:2]
 newCameraMatrix, roi = cv.getOptimalNewCameraMatrix(cameraMatrix, dist, (w,h), 1, (w,h))
 
@@ -106,13 +112,39 @@ cv.imwrite(ruta4, dst)
 
 # Undistort with Remapping
 mapx, mapy = cv.initUndistortRectifyMap(cameraMatrix, dist, None, newCameraMatrix, (w,h), 5)
+
+# Verificar si mapx y mapy son válidos
+if mapx is None or mapy is None:
+    print("❌ ERROR: Los mapas de remapeo (mapx, mapy) son inválidos.")
+    exit()
+
+# Verificar si los mapas tienen dimensiones correctas
+print(f"mapx shape: {mapx.shape}, mapy shape: {mapy.shape}")
+
 dst = cv.remap(img, mapx, mapy, cv.INTER_LINEAR)
+
+# Verificar si dst está vacío
+if dst is None or dst.size == 0:
+    print("❌ ERROR: `cv.remap()` devolvió una imagen vacía. Verifica los mapas y la imagen de entrada.")
+    exit()
+
+# Verificar el tamaño de la imagen resultante
+print(f"dst shape: {dst.shape}")
 
 # crop the image
 x, y, w, h = roi
+
+print(f"ROI: (x={x}, y={y}, w={w}, h={h})")
+
+# Verificar si el recorte está dentro de los límites de la imagen
+if x < 0 or y < 0 or x + w > dst.shape[1] or y + h > dst.shape[0]:
+    print("❌ ERROR: El ROI está fuera de los límites de la imagen.")
+    exit()
+
+# Recortar la imagen
 dst = dst[y:y+h, x:x+w]
 name5='caliResult2.png'
-ruta5 = os.path.join(path, name4)
+ruta5 = os.path.join(path, name5)
 cv.imwrite(ruta5, dst)
 
 

@@ -22,6 +22,7 @@ Servo myServo;  // Crea un objeto Servo
 ///////// SERIAL /////////////
 
 String strT = "";
+String strTot = "";
 const char separatorT = ',';
 const int dataLengthT = 5;
 int datoT[dataLengthT];
@@ -51,8 +52,8 @@ String Dato_movimiento, Dato_velocidad;
 
 // ========= ASCENSOR =============//
 #define ENA 10
-#define L_PWM 11
-#define R_PWM 12
+#define L_PWM 12
+#define R_PWM 11
 // #define A_ANAG_PIN A0
 int potPin = A0; // Pin del potenciómetro
 int Distance;
@@ -202,8 +203,11 @@ void setup() {
   motor4.setPvLimits(800,0);
   motor4.setGains(0.4, 0.5, 0.02); // (Kc,Ti,Td)
 
-
+setServoAngle(175);  
 Detener();
+ReadAllDistances();
+
+Serial1.println(datoT[1]);
 } 
 
 //====================== BUCLE PRINCIPAL ======================//
@@ -212,30 +216,33 @@ void loop() {
     ////////////////////////////////SERIAL USB//////////////////////////////////////
 
     strT = "";
+    strTot = "";
     if (Serial.available())
     {
       strT = Serial.readStringUntil('\n');
-      // Serial.println(strT);
+      Serial.println(strT);
+      strTot = strT;
       for (int i = 0; i < dataLengthT; i++)
       {
         int index = strT.indexOf(separatorT);
         datoT[i] = strT.substring(0, index).toInt();
         strT = strT.substring(index + 1);
       }
-      // for (int i = 0; i < dataLengthT; i++)
-      // {
-      //   Serial.print("Dato ");
-      //   Serial.print(i);
-      //   Serial.print("  =  ");
-      //   Serial.print(datoT[i]);
-      //   Serial.print("  -  ");
-      // }
-      // Serial.println(" ");
+    for (int i = 0; i < dataLengthT; i++)
+     {
+        Serial.print("Dato ");
+        Serial.print(i);
+        Serial.print("  =  ");
+        Serial.print(datoT[i]);
+        Serial.print("  -  ");
+     }
+       Serial.println(" ");
     }
 
     if (Serial1.available())
     {
       strT = Serial1.readStringUntil('\n');
+      strTot = strT;
       // Serial.println(strT);
       for (int i = 0; i < dataLengthT; i++)
       {
@@ -340,6 +347,7 @@ void loop() {
 
        case 13:
       ReadAllDistances();
+      PrintDistances();
       datoT[0] = 0;
       break;
 
@@ -355,6 +363,7 @@ void loop() {
 
       case 17:
       FrontBack(datoT[1],150);
+      
 
       datoT[0] = 0;
       break;
@@ -386,6 +395,13 @@ void loop() {
       case 21:
       printAltura();
       Endstop_Status();
+      datoT[0] = 0;
+      break;
+
+      case 30:
+      Serial1.println(strTot);
+      Serial.println("Mensaje enviado: ");
+      Serial.println(strTot);
       datoT[0] = 0;
       break;
 
@@ -659,8 +675,21 @@ void ReadAllDistances() {
   Serial.println(" cm");
 
   // Espera 500 ms antes de la siguiente lectura
-  delay(500);
+  // delay(500);
 }
+
+void PrintDistances() {
+ 
+  ReadAllDistances();
+  String message = "133," + String(int(Distance1)) + "," + String(int(Distance2));
+
+  // Enviar el mensaje por Serial1
+  Serial1.println(message);
+
+  // También imprimir el mensaje en el monitor serial
+  Serial.println(message);
+}
+
 
 
 void controlarMotor(int vel, int dirPin, int velPin, const char* motorLabel) {
@@ -878,6 +907,15 @@ void DejarCarga() {
 
 void FrontBack(int position, int Speed)
 {   
+        String message = "150,0";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA INICIO");
+
     // Inicializa la posición acumulada y la matriz de datos
     float PositionTraslation = 0;
     int datos[5];
@@ -903,6 +941,16 @@ void FrontBack(int position, int Speed)
               }
           }
 
+           if (datos[0] == 20)
+        {
+          DefspeedA= 0;
+          DefspeedB= 0;
+          DefspeedC= 0;
+          DefspeedD= 0;
+
+          break;
+        }
+
           if (datos[0] == 100)
           {
               unsigned long currentMillis = millis();
@@ -912,7 +960,7 @@ void FrontBack(int position, int Speed)
                   previousMillis = currentMillis;
 
                   // Calcula la velocidad y desplazamiento absolutos
-                  float dVx = rwheel * abs(datos[1] / 100); // Toma el valor absoluto de datos[1]
+                  float dVx = rwheel * abs(datos[2] / 100); // Toma el valor absoluto de datos[1]
                   float dPx = dVx * sampleTimeW / 1000;
 
                   // Ajusta la posición acumulada según la dirección del movimiento
@@ -954,6 +1002,15 @@ void FrontBack(int position, int Speed)
       controlarTodosLosMotores(0, 0, 0, 0);
       PositionTraslation = 0;
 
+       message = "150,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA FIN");
+
 }
 
 
@@ -984,6 +1041,26 @@ void LeftRight(int position, int Speed)
               }
           }
 
+        
+
+          if (datos[0] == 20)
+        {
+          DefspeedA= 0;
+          DefspeedB= 0;
+          DefspeedC= 0;
+          DefspeedD= 0;
+           break;
+        }
+
+        if (Distance1 <=10)
+        {
+          DefspeedA= 0;
+          DefspeedB= 0;
+          DefspeedC= 0;
+          DefspeedD= 0;
+           break;
+        }
+
           if (datos[0] == 100)
           {
               unsigned long currentMillis = millis();
@@ -993,7 +1070,7 @@ void LeftRight(int position, int Speed)
                   previousMillis = currentMillis;
 
                   // Calcula la velocidad y desplazamiento absolutos
-                  float dVx = rwheel * (datos[1] / 100); // Toma el valor absoluto de datos[1]
+                  float dVx = rwheel * (datos[2] / 100); // Toma el valor absoluto de datos[1]
                   float dPx = dVx * sampleTimeW / 1000;
 
                   // Ajusta la posición acumulada según la dirección del movimiento
@@ -1024,6 +1101,7 @@ void LeftRight(int position, int Speed)
                   Serial.print(PositionTraslation);
                   Serial.print(" Speed: ");
                   Serial.println(adjustedSpeed);
+                  ReadAllDistances();
               }
 
               // Resetea el indicador de datos leídos
@@ -1034,6 +1112,15 @@ void LeftRight(int position, int Speed)
       // Detener los motores y reiniciar la posición
       controlarTodosLosMotores(0, 0, 0, 0);
       PositionTraslation = 0;
+
+
+        String message = "150,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA FIN");      
 
 }
 
@@ -1182,6 +1269,15 @@ void Rotate(int angle, int Speed)
             }
         }
 
+        if (datos[0] == 20)
+        {
+          DefspeedA= 0;
+          DefspeedB= 0;
+          DefspeedC= 0;
+          DefspeedD= 0;
+           break;
+        }
+
         if (datos[0] == 100)
         {
             unsigned long currentMillis = millis();
@@ -1191,7 +1287,7 @@ void Rotate(int angle, int Speed)
                 previousMillis = currentMillis;
 
                 // Calcula la variación de ángulo (dW)
-                float dWp = rwheel * (((datos[1]) / 100.0) / ((Lx + Ly)));
+                float dWp = rwheel * (((datos[2]) / 100.0) / ((Lx + Ly)));
                 float dW = dWp * sampleTimeW / 1000;
                 float degree = dW * (180 / 3.1416);
 
@@ -1231,6 +1327,15 @@ void Rotate(int angle, int Speed)
     // Detiene los motores y reinicia el ángulo
     controlarTodosLosMotores(0, 0, 0, 0);
     rotationAngle = 0;
+
+    String message = "150,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA FIN");    
 }
 
 

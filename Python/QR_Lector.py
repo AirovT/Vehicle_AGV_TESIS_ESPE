@@ -21,7 +21,7 @@ diccionarioProductos = {
 class QRLector:
     def __init__(self):
         # Configuración MQTT
-        mqtt_server_ip = "192.168.1.5"
+        mqtt_server_ip = "192.168.1.9"
         self.mqtt_server_ip = mqtt_server_ip
         self.client = mqtt.Client()
         self.client.connect(self.mqtt_server_ip)

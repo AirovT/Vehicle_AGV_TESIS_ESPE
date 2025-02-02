@@ -5,7 +5,7 @@ import threading
 
 CHESS_BOARD_DIM = (9, 6)  # Define la dimensión del tablero de ajedrez como una tupla de dos valores
 n = 0  # Variable declarada para almacenar la cantidad de imagenes
-dir = "Calibracion"  # Establece la ruta del directorio donde se guardarán las imágenes.
+dir = "Calibracion2.0"  # Establece la ruta del directorio donde se guardarán las imágenes.
 full_dir_path = os.path.abspath(dir)
 
 CHECK_DIR = os.path.isdir(dir)  # Comprueba si el directorio de imágenes ya existe.
@@ -25,7 +25,7 @@ def detect_checker_board(image, grayImage, criteria, boardDimension):  # Define 
     return image, ret
 
 # Cambia aquí tu RTSP URL si es necesario
-rtsp_url = "rtsp://admin:L28E4E11@192.168.11.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
 cap = cv.VideoCapture(rtsp_url)  # Inicializa la captura desde la cámara RTSP
 
 if not cap.isOpened():
