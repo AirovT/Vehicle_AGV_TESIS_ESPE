@@ -104,6 +104,8 @@ void loop(){
 
   static char btBuffer[256];  // Buffer para datos Bluetooth
   static int btIndex = 0;     // Índice del buffer Bluetooth
+  static char serial2Buffer[256];  // Buffer para datos de Serial2
+  static int serial2Index = 0;     // Índice del buffer Serial2
 
   // Procesar datos desde Bluetooth al Mega
   while (SerialBT.available()) {
@@ -131,6 +133,22 @@ void loop(){
       btBuffer[btIndex++] = c; // Almacena el carácter en el buffer
     }
   }
+
+    // Procesar datos desde Mega (Serial2) y enviarlos por Bluetooth
+  while (Serial2.available()) {
+    char c = Serial2.read();
+    if (c == '\n') { // Mensaje completo recibido desde Mega
+      btBuffer[btIndex] = '\0'; // Finaliza el mensaje
+      SerialBT.write((const uint8_t*)btBuffer, btIndex); // Envía todo el buffer por Bluetooth
+      SerialBT.write('\n'); // Agrega salto de línea por Bluetooth
+      Serial.println(btBuffer); // Imprime mensaje en el serial
+      btIndex = 0; // Reinicia el índice
+    } else if (btIndex < sizeof(btBuffer) - 1) {
+      btBuffer[btIndex++] = c; // Almacena el carácter en el buffer
+    }
+  }
+
+  
 
   imprimirVelocidades(sampleTimeImpresion);
   EnviarVelocidad(sampleTimeEnvio);
