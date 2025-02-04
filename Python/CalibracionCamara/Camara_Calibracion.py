@@ -5,7 +5,7 @@ import pickle
 import os
 
 ################ FIND CHESSBOARD CORNERS - OBJECT POINTS AND IMAGE POINTS #############################
-chessboardSize = (9,6)
+chessboardSize = (10,7)
 frameSize = (640,480)
 
 # termination criteria
@@ -15,14 +15,14 @@ criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 objp = np.zeros((chessboardSize[0] * chessboardSize[1], 3), np.float32)
 objp[:,:2] = np.mgrid[0:chessboardSize[0],0:chessboardSize[1]].T.reshape(-1,2)
 
-size_of_chessboard_squares_mm = 25
+size_of_chessboard_squares_mm = 24
 objp = objp * size_of_chessboard_squares_mm
 
 # Arrays to store object points and image points from all the images.
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-images = glob.glob('Calibracion2.0/*.png')
+images = glob.glob('Calibracion3.0/*.png')
 
 for image in images:
 
@@ -125,7 +125,7 @@ dst = cv.remap(img, mapx, mapy, cv.INTER_LINEAR)
 
 # Verificar si dst está vacío
 if dst is None or dst.size == 0:
-    print("❌ ERROR: `cv.remap()` devolvió una imagen vacía. Verifica los mapas y la imagen de entrada.")
+    print("❌ ERROR: cv.remap() devolvió una imagen vacía. Verifica los mapas y la imagen de entrada.")
     exit()
 
 # Verificar el tamaño de la imagen resultante

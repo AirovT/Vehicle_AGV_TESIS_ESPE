@@ -30,14 +30,14 @@ def Estimation(ID_Objetivo):
         return np.array([x, y, z])  # Devolver ángulos de Euler como un array
 
     marker_size = 180  # Tamaño del marcador ArUco
-    camera_matrix = np.array([[1.25893332e+03, 0.00000000e+00, 5.22304630e+02],
-                              [0.00000000e+00, 1.27293638e+03, 4.92206435e+02],
+    camera_matrix = np.array([[1.15428551e+03, 0.00000000e+00, 9.83697630e+02],
+                              [0.00000000e+00, 1.14974157e+03, 4.89616747e+02],
                               [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]) 
-    camera_distortion = np.array([[ -0.4894947,
-                                    0.20673354,
-                                    -0.0178347,
-                                    0.05254465,
-                                    -0.06985189]])  
+    camera_distortion = np.array([[ -0.33591724,
+                                    0.11987057,
+                                    0.00090942,
+                                    -0.00156296,
+                                    -0.02424592]])  
     # aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_50)  # Definir diccionario de marcadores ArUco
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
     parameters = cv2.aruco.DetectorParameters()

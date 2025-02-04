@@ -58,7 +58,7 @@ String Dato_movimiento, Dato_velocidad;
 int potPin = A0; // Pin del potenciómetro
 int Distance;
 int maxPosition = 16900;
-int minSpeed = 35;
+int minSpeed = 70;
 
 unsigned long previousMillis = 0; // Almacena el último tiempo de actualización
 const long interval = 500; // Intervalo de 0.5 segundos (500 milisegundos)
@@ -113,9 +113,9 @@ int Distance2;
 
 // speed
  
-float rwheel = 9.5;
-float Lx=18.15;
-float Ly=19.63;
+float rwheel = 10.8;
+float Lx=18.25;
+float Ly=19.5;
 float speedA;
 float speedB;
 float speedC;
@@ -376,7 +376,7 @@ void loop() {
       break;
 
       case 19:
-      Rotate(datoT[1] , 150);
+      Rotate(datoT[1] , 100);
 
       datoT[0] = 0;
       break;
@@ -907,7 +907,7 @@ void DejarCarga() {
 
 void FrontBack(int position, int Speed)
 {   
-        String message = "150,0";
+        String message = "150,1";
 
         // Enviar el mensaje por Serial1
         Serial1.println(message);
@@ -948,7 +948,34 @@ void FrontBack(int position, int Speed)
           DefspeedC= 0;
           DefspeedD= 0;
 
+          message = "151,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA FIN");
+
           break;
+        }
+
+        if (Distance1 <=10)
+        {
+          Serial.println("EXISTE OBJETIVO INTERFIRIENDO");
+          DefspeedA= 0;
+          DefspeedB= 0;
+          DefspeedC= 0;
+          DefspeedD= 0;
+          message = "151,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA FIN");
+           break;
         }
 
           if (datos[0] == 100)
@@ -1002,7 +1029,7 @@ void FrontBack(int position, int Speed)
       controlarTodosLosMotores(0, 0, 0, 0);
       PositionTraslation = 0;
 
-       message = "150,1";
+       message = "151,1";
 
         // Enviar el mensaje por Serial1
         Serial1.println(message);
@@ -1016,6 +1043,14 @@ void FrontBack(int position, int Speed)
 
 void LeftRight(int position, int Speed)
 {   
+        String message = "150,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA INICIO");
     // Inicializa la posición acumulada y la matriz de datos
     float PositionTraslation = 0;
     int datos[5];
@@ -1049,17 +1084,19 @@ void LeftRight(int position, int Speed)
           DefspeedB= 0;
           DefspeedC= 0;
           DefspeedD= 0;
+
+          message = "151,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA FIN");
            break;
         }
 
-        if (Distance1 <=10)
-        {
-          DefspeedA= 0;
-          DefspeedB= 0;
-          DefspeedC= 0;
-          DefspeedD= 0;
-           break;
-        }
+        
 
           if (datos[0] == 100)
           {
@@ -1070,7 +1107,7 @@ void LeftRight(int position, int Speed)
                   previousMillis = currentMillis;
 
                   // Calcula la velocidad y desplazamiento absolutos
-                  float dVx = rwheel * (datos[2] / 100); // Toma el valor absoluto de datos[1]
+                  float dVx = rwheel * (-datos[2] / 100); // Toma el valor absoluto de datos[1]
                   float dPx = dVx * sampleTimeW / 1000;
 
                   // Ajusta la posición acumulada según la dirección del movimiento
@@ -1094,7 +1131,7 @@ void LeftRight(int position, int Speed)
                   adjustedSpeed *= direction; // Aplica la dirección para el control del motor
 
                   // Controla los motores con la velocidad ajustada
-                  controlarTodosLosMotores(adjustedSpeed, -adjustedSpeed, adjustedSpeed, -adjustedSpeed);
+                  controlarTodosLosMotores(-adjustedSpeed, adjustedSpeed, -adjustedSpeed, adjustedSpeed);
 
                   // Mensajes de depuración
                   Serial.print("Position: ");
@@ -1114,7 +1151,7 @@ void LeftRight(int position, int Speed)
       PositionTraslation = 0;
 
 
-        String message = "150,1";
+         message = "151,1";
 
         // Enviar el mensaje por Serial1
         Serial1.println(message);
@@ -1244,6 +1281,15 @@ void LeftRight(int position, int Speed)
 
 void Rotate(int angle, int Speed)
 {
+    String message = "150,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA INICIO");
+
     float rotationAngle = 0; // Ángulo acumulado
     int datos[5];            // Matriz para almacenar los datos recibidos
 
@@ -1275,6 +1321,14 @@ void Rotate(int angle, int Speed)
           DefspeedB= 0;
           DefspeedC= 0;
           DefspeedD= 0;
+          message = "151,1";
+
+        // Enviar el mensaje por Serial1
+        Serial1.println(message);
+        Serial1.println(message);
+
+        // También imprimir el mensaje en el monitor serial
+        Serial.println("BANDERA FIN");
            break;
         }
 
@@ -1287,7 +1341,7 @@ void Rotate(int angle, int Speed)
                 previousMillis = currentMillis;
 
                 // Calcula la variación de ángulo (dW)
-                float dWp = rwheel * (((datos[2]) / 100.0) / ((Lx + Ly)));
+                float dWp = rwheel * ((-(datos[2]) / 100.0) / ((Lx + Ly)));
                 float dW = dWp * sampleTimeW / 1000;
                 float degree = dW * (180 / 3.1416);
 
@@ -1328,7 +1382,7 @@ void Rotate(int angle, int Speed)
     controlarTodosLosMotores(0, 0, 0, 0);
     rotationAngle = 0;
 
-    String message = "150,1";
+     message = "151,1";
 
         // Enviar el mensaje por Serial1
         Serial1.println(message);

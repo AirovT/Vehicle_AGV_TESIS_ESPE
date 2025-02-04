@@ -3,9 +3,9 @@ import os
 import keyboard
 import threading
 
-CHESS_BOARD_DIM = (9, 6)  # Define la dimensión del tablero de ajedrez como una tupla de dos valores
-n = 0  # Variable declarada para almacenar la cantidad de imagenes
-dir = "Calibracion2.0"  # Establece la ruta del directorio donde se guardarán las imágenes.
+CHESS_BOARD_DIM = (10, 7)  # Define la dimensión del tablero de ajedrez como una tupla de dos valores
+n = 51  # Variable declarada para almacenar la cantidad de imagenes
+dir = "Calibracion3.0"  # Establece la ruta del directorio donde se guardarán las imágenes.
 full_dir_path = os.path.abspath(dir)
 
 CHECK_DIR = os.path.isdir(dir)  # Comprueba si el directorio de imágenes ya existe.
@@ -46,6 +46,7 @@ capture_thread = threading.Thread(target=capture_frames)
 capture_thread.start()
 
 if __name__ == "__main__":
+    scale_percent = 50 
     while True:
         if frame is not None:
             copyFrame = frame.copy()  # Realiza una copia del fotograma capturado.
@@ -55,8 +56,33 @@ if __name__ == "__main__":
 
             # Agrega un texto al fotograma mostrando el número de imagen guardada
             cv.putText(frame, f"saved_img : {n}", (30, 40), cv.FONT_HERSHEY_PLAIN, 1.4, (255, 0, 0), 2, cv.LINE_AA)
-            cv.imshow("frame", frame)  # Muestra el fotograma en una ventana con el nombre "frame".
-            cv.imshow("copyframe", copyFrame)  # Muestra la copia del fotograma en otra ventana con el nombre "copyFrame".
+            #cv.imshow("frame", frame)  # Muestra el fotograma en una ventana con el nombre "frame".
+
+            # Redimensionar la imagen
+            width = int(frame.shape[1] * scale_percent / 100)
+            height = int(frame.shape[0] * scale_percent / 100)
+            resized_frame = cv.resize(frame, (width, height), interpolation=cv.INTER_AREA)
+
+            # Mostrar el fotograma con los marcadores y las líneas guía
+            height, width = resized_frame.shape[:2]
+
+            # Dibujar la línea vertical central
+            cv.line(resized_frame, (width // 2, 0), (width // 2, height), (0, 255, 0), 2)
+
+            # Dibujar la línea horizontal central
+            cv.line(resized_frame, (0, height // 2), (width, height // 2), (0, 255, 0), 2)
+
+            # Dibujar las 4 líneas guía horizontales equidistantes
+            for i in range(1, 3):
+                offset = height // 4 * i
+                cv.line(resized_frame, (0, offset), (width, offset), (255, 0, 0), 1)  # Azul
+                cv.line(resized_frame, (0, height - offset), (width, height - offset), (255, 0, 0), 1)
+
+            # Mostrar el resultado
+            cv.imshow('DETECCION DE ARUCO', resized_frame)
+
+
+            #cv.imshow("copyframe", copyFrame)  # Muestra la copia del fotograma en otra ventana con el nombre "copyFrame".
 
             if keyboard.is_pressed('q'):
                 break
