@@ -8,14 +8,14 @@ import json
 import time
 import os
 
-# Diccionarios para almacenar datos
+# Diccionarios para los datos
 diccionarioProductos = {
     "MT01": "Martillo Metalico", 
     "MT02": "Martillo Goma", 
     "ST01": "Estilete Plastico", 
     "DX01": "Destornillador Estrella", 
-    "DI01": "Destornillador Plano", 
-    "DI02": "Dest-Plano Madera"
+    "DP01": "Destornillador Plano", 
+    "DP02": "Dest-Plano Madera"
 }
 
 class QRLector:
@@ -138,7 +138,7 @@ class QRLector:
             time.sleep(0.1)  # Añadir una pequeña pausa para evitar problemas de publicación
 
 # Ejemplo de uso
-lector = QRLector()
+# lector = QRLector()
 # lector.procesar_codigo_qr('http://192.168.1.7/640x480.jpg')  # Desde cámara IP
-# lector.procesar_codigo_qr('codigo_qr.png')  # Desde un archivo PNG
+# lector.procesar_codigo_qr('codigo_qr2.png')  # Desde un archivo PNG
 # lector.procesar_codigo_qr('http://192.168.1.11:4747/video')  # Desde cámara IP/

@@ -8,8 +8,8 @@ diccionarioProductos = {
     "MT02": "Martillo Goma", 
     "ST01": "Estilete Plastico", 
     "DX01": "Destornillador Estrella", 
-    "DI01": "Destornillador Plano", 
-    "DI02": "Dest-Plano Madera"
+    "DP01": "Destornillador Plano", 
+    "DP02": "Dest-Plano Madera"
 }
 
 # Crear el código QR siguiendo la estructura esperada

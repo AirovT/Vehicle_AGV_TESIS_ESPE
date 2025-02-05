@@ -53,6 +53,8 @@ def Estimation(ID_Objetivo):
     parameters = cv2.aruco.DetectorParameters()
     aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
     rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+    # rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif&rtsp_transport=udp"
+    
     cap = cv2.VideoCapture(rtsp_url)    
     while True:
         ret, frame = cap.read()

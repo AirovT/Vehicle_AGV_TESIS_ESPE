@@ -221,8 +221,6 @@ class VentanaAutomatico:
         while True:
             if self.serialArduino.in_waiting > 0:
                 mensaje = self.serialArduino.readline().decode().strip()
-                print("Mensaje recibido:", mensaje)
-                
                 # Procesar el mensaje recibido
                 self.procesar_mensaje(mensaje)
             else:
@@ -230,32 +228,31 @@ class VentanaAutomatico:
                 pass
 
     def procesar_mensaje(self, mensaje):
-        # Simular el procesamiento del mensaje como lo harías en Arduino
+        print("\t[INFO] 📩 Mensaje recibido:", mensaje)
         partes = mensaje.split(",")
         if partes[0] == "150" and len(partes) >= 2:
-            if partes[1] == "1":  # Asegurar que partes[1] es una cadena si mensaje es cadena
+            if partes[1] == "1":
                 self.BANDERA_INIT[0] = True
-                print("Recbibido Bandera Init TRUE")
+                print("\t\t✅ Recibido Bandera Init TRUE")
             elif partes[1] == "0":
                 self.BANDERA_INIT[0] = False
-                print("Recbibido Bandera Init False")
+                print("\t\t❌ Recibido Bandera Init FALSE")
         
         elif partes[0] == "151" and len(partes) >= 2:
-            if partes[1] == "1":  # Asegurar que partes[1] es una cadena si mensaje es cadena
+            if partes[1] == "1":
                 self.BANDERA_FIN[0] = True
-                print("Recbibido Bandera Fin TRUE")
+                print("\t\t✅ Recibido Bandera Fin TRUE")
             elif partes[1] == "0":
                 self.BANDERA_FIN[0] = False
-                print("Recbibido Bandera Fin FALSE")
-
+                print("\t\t❌ Recibido Bandera Fin FALSE")
+        
         else:
-            # Mensaje no reconocido
-            print("Mensaje no reconocido AUTO:", mensaje)
+            print("⚠️ Mensaje no reconocido AUTO:", mensaje)
+
 
     #funcione de seteo de angulo servo
-    def angle(self):
+    def angle(self, angleData:int):
         # Obtener el valor actual del slider y limpiar cualquier carácter de nueva línea
-        angleData = str(self.slider.get()).strip()
         datos = "12,"+angleData+",0,0,0"
         print(f"Enviando datos: {datos}")
         # Suponiendo que `self.serialArduino` está inicializado correctamente
@@ -291,15 +288,9 @@ class VentanaAutomatico:
             # Mostrar el cuadro de advertencia de inicio de movimiento del robot
             message = " " * 10 + "PRECAUCIÓN\n\nROBOT EN MOVIMIENTO"
             messagebox.showwarning("Advertencia", message, icon="warning", parent=self.master)
-
-            # self.MoverDis(200,10,self.BANDERA)
-            # self.GirarGrados(100,10,self.BANDERA)     
-            # self.controller.Desplazar(200)
-            # self.controller.AvanzarHasta(100)
-            self.controller.AvanzarHasta(100)
-            self.controller.GiroRobot(90)
-
-            time.sleep(5)
+            
+            self.controller.AvanzarHasta(100,70,150)
+            self.controller.GiroRobot(90,70,150)
 
             print("Detectamos caja y pasamos a enviar atributos")
             funciones_complementarias.publish_message("robot/estado", "TRUE")
@@ -313,32 +304,30 @@ class VentanaAutomatico:
                 
                 if not Verificador_Aruco:
                     print("Girando robot...")
-                    self.controller.GiroRobot(45)
+                    self.controller.GiroRobot(45,50,90)
                     time.sleep(5)  # Espera 5 segundos entre verificaciones
 
-            self.controller.Estimation(Objetivo_Aruco)   
-
-            # self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco, self.serialArduino) #Llamamos a la funcion de estimacion para empezar con la navegacion  
-            
+            self.controller.Estimation(Objetivo_Aruco)    
 
             # # MOVIMIENTO DE ACCIONAMIENTO DE CAJA
-            # self.CogerCarga()
-            # time.sleep(20)
+            self.ir_piso(2)
+            self.CogerCarga()
+            time.sleep(20)
 
             # #setear servo
-            # self.angle(175)
+            self.angle(175)
 
             # #LECTURA DE CODIGO QR
 
-            # print("Esperando detección de código QR...")   
-            # lector = QRLector()
+            print("Esperando detección de código QR...")   
+            lector = QRLector()
 
             # #LLama a la Funcion de Detección de QR
-            # datos_mensaje = lector.procesar_codigo_qr(direccionCamera)
-            # print(datos_mensaje)
+            datos_mensaje = lector.procesar_codigo_qr(direccionCamera)
+            print(datos_mensaje)
 
-            # #setear servo
-            # self.angle(100)
+            #setear servo
+            self.angle(100)
 
             # #VALIDACION DE REPISAS
             # # Extraer la celda de los datos
@@ -379,11 +368,11 @@ class VentanaAutomatico:
             #     # Determinar el piso basado en el número del casillero
             #     if self.Existe_Casillero in [1, 4, 7]:
             #         print("Moviendo al piso A")
-            #         self.ir_piso(1)  # Piso A
+            #         self.ir_piso(0)  # Piso A
             #         print("Fin movimiento asensor piso 1")
             #     elif self.Existe_Casillero in [2, 5, 8]:
             #         print("Moviendo al piso B")
-            #         self.ir_piso(2)  # Piso B
+            #         self.ir_piso(1)  # Piso B
             #         print("Fin movimiento asensor piso 2")
             #     elif self.Existe_Casillero in [3, 6, 9]:
             #         print("Moviendo al piso C")
@@ -572,7 +561,7 @@ class VentanaAutomatico:
 
     def GirarGrados(self, grados, tiempo, BANDERA):
         print(f"Girando {grados} grados por {tiempo} segundos...")
-        datos = f"19,{grados},0,0"
+        datos = f"19,{grados*0.9},0,0"
         try:
             mensaje_con_salto = datos + "\n"
             self.serialArduino.write(mensaje_con_salto.encode())
@@ -1043,7 +1032,7 @@ class VentanaManual:
         while True:
             if self.serialArduino.in_waiting > 0:
                 mensaje = self.serialArduino.readline().decode().strip()
-                print("Mensaje recibido:", mensaje)
+                print("\t\tMensaje recibido:", mensaje)
                 
                 # Procesar el mensaje recibido
                 self.procesar_mensaje(mensaje)

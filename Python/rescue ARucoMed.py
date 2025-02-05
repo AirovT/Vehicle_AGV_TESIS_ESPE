@@ -10,70 +10,10 @@ import socket
 import json
 import serial
 import matplotlib.pyplot as plt
-import threading
 
 logging.basicConfig(level=logging.INFO)
 
 counter = 0
-
-class CameraStreaming:
-    def __init__(self, rtsp_url, camera_matrix, camera_distortion):
-        self.rtsp_url = rtsp_url
-        self.camera_matrix = camera_matrix
-        self.camera_distortion = camera_distortion
-        self.frame = None
-        self.running = True
-        self.lock = threading.Lock()
-        
-        self.thread = threading.Thread(target=self._update_frame, daemon=True)
-        self.thread.start()
-        
-        self.visualization_thread = threading.Thread(target=self._visualization_loop, daemon=True)
-        self.visualization_thread.start()
-
-    def _update_frame(self):
-        cap = cv2.VideoCapture(self.rtsp_url)
-        while self.running:
-            ret, frame = cap.read()
-            if ret:
-                with self.lock:
-                    self.frame = frame
-        cap.release()
-
-    def get_frame(self):
-        with self.lock:
-            return self.frame
-
-    def _visualization_loop(self):
-        while self.running:
-            frame = self.get_frame()
-            if frame is not None:
-                self._visualizar_deteccion(frame)
-            time.sleep(0.03)
-    
-    def _visualizar_deteccion(self, frame):
-        scale_percent = 50
-        width = int(frame.shape[1] * scale_percent / 100)
-        height = int(frame.shape[0] * scale_percent / 100)
-        resized_frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
-
-        cv2.namedWindow('DETECCION DE ARUCO')
-        h, w = resized_frame.shape[:2]
-        cv2.line(resized_frame, (w//2, 0), (w//2, h), (0, 255, 0), 2)
-        cv2.line(resized_frame, (0, h//2), (w, h//2), (0, 255, 0), 2)
-            
-        for i in range(1, 3):
-            offset = h//4 * i
-            cv2.line(resized_frame, (0, offset), (w, offset), (255, 0, 0), 1)
-            cv2.line(resized_frame, (0, h-offset), (w, h-offset), (255, 0, 0), 1)
-
-        # Mostrar frame (opcional)
-        cv2.imshow('ArUco Detection', resized_frame)
-        cv2.waitKey(1)
-
-    def stop(self):
-        self.running = False
-        cv2.destroyAllWindows()
 
 
 class MovementController:
@@ -83,12 +23,11 @@ class MovementController:
         self.bandera_init = bandera_init  # Shared list reference
         self.bandera_fin = bandera_fin    # Shared list reference
         self.serialArduino = None
-        
 
         # Parámetros configurables
-        self.UMBRAL_ROTACION = 5    # Grados
-        self.UMBRAL_POSICION = 3    # Centímetros
-        self.DISTANCIA_OBJETIVO = 60   # Centímetros
+        self.UMBRAL_ROTACION = 3    # Grados
+        self.UMBRAL_POSICION = 10    # Centímetros
+        self.DISTANCIA_OBJETIVO = 60    # Centímetros
         self.TIMEOUT_DETECCION = 2  # Segundos
         self.MAX_INTENTOS = 3       # Intentos de recuperación
 
@@ -107,8 +46,6 @@ class MovementController:
         self.aruco_detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.parameters)
         
         self.Conectar_Blu_Auto(self.BTPort)
-        self.rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
-        self.camera_stream = CameraStreaming(self.rtsp_url, self.camera_matrix, self.camera_distortion)
 
     @staticmethod
     def isRotationMatrix(R):
@@ -183,7 +120,6 @@ class MovementController:
             print("❌ ArUco no encontrado")
             return None, None, None, None, None, None, None, False
 
-    
     def Estimation(self, ID_Objetivo):
         print("🚀 Iniciando proceso de estimación...")
         self.Conectar_Blu_Auto(self.BTPort)
@@ -198,8 +134,8 @@ class MovementController:
         iteracion = 1
         while not all(estado.values()):
             print(f"\n🔄 Iteración {iteracion}...")
-            time.sleep(2)
-            frame = self.camera_stream.get_frame()
+            time.sleep(10)
+            frame = self.capturar_frame()
             x, y, z, roll, corners, rvec, tvec, found = self.LocationAruco(frame,ID_Objetivo)
             
             if not found:
@@ -216,16 +152,16 @@ class MovementController:
             if not estado['rotacion_corregida'] or abs(roll_filtrado) > self.UMBRAL_ROTACION:
                 if abs(roll_filtrado) > self.UMBRAL_ROTACION:
                     print("🔄 Corrigiendo rotación...")
-                    self._corregir_rotacion(roll_filtrado, ID_Objetivo)
+                    self._corregir_rotacion(roll_filtrado, ID_Objetivo, frame)
                 else:
                     print("✅ Rotación corregida!")
                     estado['rotacion_corregida'] = True
             
             if estado['rotacion_corregida'] and not estado['posicion_corregida']:
                 x_cm = x_filtrado/10
-                if abs(x_cm) > self.UMBRAL_POSICION:
+                if abs(x_filtrado) > self.UMBRAL_POSICION:
                     print("➡️ Desplazando lateralmente...")
-                    self.Desplazar(-x_cm,50,50)
+                    self.Desplazar(-x_cm)
                 else:
                     print("✅ Posición corregida!")
                     estado['posicion_corregida'] = True
@@ -233,40 +169,36 @@ class MovementController:
             if all([estado['rotacion_corregida'], estado['posicion_corregida']]) and not estado['distancia_ok']:
                 if z_cm > self.DISTANCIA_OBJETIVO:
                     print("📏 Ajustando distancia...")
-                    self.AvanzarHasta(z_cm*1/3,70,150)
+                    self.AvanzarHasta(z_cm*1/3)
                     estado.update({'posicion_corregida': False, 'rotacion_corregida': False})
-                    time.sleep(2)
-                    frame = self.camera_stream.get_frame()
-                    x, y, z, roll, corners, rvec, tvec, found = self.LocationAruco(frame,ID_Objetivo)
-                    
-                    if not found:
-                        print("🔄 Intentando recuperar ArUco...")
-                        self._recuperar_aruco(ID_Objetivo, frame)
-                        continue
                 else:
                     print("✅ Distancia corregida! Alineación completada")
-                    self.AvanzarHasta(z_cm*2/3,60,60)
+                    self.AvanzarHasta(z_cm*2/3)
                     estado['distancia_ok'] = True
-                    
             
             iteracion += 1
             
-        self.AvanzarHasta(10,60,60)
         print("🎯 Alineación completada exitosamente")
 
-    def _corregir_rotacion(self, roll, ID_Objetivo):
-        """Corrige rotación con verificación continua"""
-        print(f"[ROTACIÓN] Aplicando corrección de {roll:.1f}°")
-        self.GiroRobot(int(roll*0.6),65,70)
+    def _corregir_rotacion(self, roll, ID_Objetivo, frame):
+        print("🔄 Corrigiendo rotación del robot...")
+        self.GiroRobot(roll)
+        start_time = time.time()
         
-        # Esperar estabilización y verificar
-        time.sleep(3)  # Ajustar según respuesta del robot
-        frame = self.camera_stream.get_frame()
-        _, _, _, new_roll, _, _, _, found = self.LocationAruco(frame, ID_Objetivo)
-        
-        if not found or abs(new_roll) > self.UMBRAL_ROTACION:
-            print("[ROTACIÓN] Corrección insuficiente, repitiendo...")
-            self._corregir_rotacion(new_roll, ID_Objetivo)
+        while (time.time() - start_time) < self.TIMEOUT_DETECCION:
+            time.sleep(10)
+            frame = self.capturar_frame()
+            _, _, _, _, _, _, _, found = self.LocationAruco(frame, ID_Objetivo)
+            
+            if not found:
+                print("⚠️ ArUco perdido, intentando recuperación...")
+                direccion = -5 if roll > 0 else 5
+                self.Desplazar(direccion)
+                self.AvanzarHasta(-10)
+            else:
+                print("✅ ArUco recuperado después de rotación")
+                return
+        raise Exception("❌ No se pudo recuperar el ArUco después de rotación")
 
 
     def _visualizar_deteccion(self, frame, corners, rvec, tvec, x, y, z, roll):
@@ -302,9 +234,9 @@ class MovementController:
         # Implementar movimiento en espiral o patrón de búsqueda
         # Ejemplo simple: movimiento lateral alternado
         for _ in range(self.MAX_INTENTOS):
-            self.AvanzarHasta(-10,70,150)
-            time.sleep(4)
-            frame = self.camera_stream.get_frame()
+            self.AvanzarHasta(-10)
+            time.sleep(10)
+            frame = self.capturar_frame()
             if self.LocationAruco(frame, ID_Objetivo)[7]:  # Índice 7 = 'found'
                 return
         raise Exception("ArUco críticamente perdido")
@@ -471,14 +403,43 @@ class MovementController:
     #     return True
 
 
-    def GiroRobot(self, angle, minSpeed: int, maxSpeed: int):
+    def Posicionamiento(self, x_, roll_a):
+        """Handle positioning with flag status tracking"""
+        print(f"\n📍 INICIANDO POSICIONAMIENTO - Flags [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]")
+        
+        # Roll adjustment
+        if abs(roll_a) > 2:
+            print(f"🔄 Ajuste de roll: {roll_a}°")
+            print(f"   Pre-giro Flags [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]")
+            if self.GiroRobot(roll_a):
+                print(f"   Post-giro Flags [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]")
+            else:
+                print("❌ Fallo en ajuste de roll")
+                return False
+
+        # Lateral movement
+        if abs(x_) > 5:
+            direction = "Izquierda" if x_ > 0 else "Derecha"
+            print(f"➡️ Desplazamiento {direction}")
+            print(f"   Pre-desplazamiento Flags [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]")
+            try:
+                self.Desplazar(int(x_/10))
+                print(f"   Post-desplazamiento Flags [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]")
+            except Exception as e:
+                print(f"❌ Error en desplazamiento: {str(e)}")
+                return False
+
+        print(f"🏁 Posicionamiento completado - Flags [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]\n")
+        return True
+
+    def GiroRobot(self, angle):
         """Handle rotation with flag monitoring"""
         print(f"\n🔄 INICIANDO GIRO DE {angle}°")
         print(f"   Flags iniciales [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]")
         print("GIRANDO HORARIO" if angle > 0 else "GIRANDO ANTIHORARIO")
 
         try:
-            self._send_command(f"19,{int(angle)},{minSpeed},{maxSpeed}")
+            self._send_command(f"19,{(int(angle))}")
             print("📡 Comando enviado, esperando INIT...")
             
             if not self._wait_for_init():
@@ -529,7 +490,7 @@ class MovementController:
         self.serialArduino.write(f"{command}\n".encode())
         print(f"   Post-envio Flags [INIT: {self.bandera_init[0]}, FIN: {self.bandera_fin[0]}]")
 
-    def Desplazar(self, offset: int, minSpeed: int, maxSpeed: int):
+    def Desplazar(self, offset: int):
         """
         Move left/right using signed offset
         - Positive values: Right (Derecha)
@@ -538,7 +499,7 @@ class MovementController:
         print(f"\n🔄 DESPLAZAMIENTO LATERAL: {'Derecha' if offset > 0 else 'Izquierda'} {abs(offset)}u")
         
         # Send command with signed value
-        command = f"18,{int(offset*0.9)},{minSpeed},{maxSpeed}"
+        command = f"18,{offset}"
         self._send_command(command)
         
         # Wait for confirmation
@@ -548,7 +509,7 @@ class MovementController:
         print("❌ Fallo en desplazamiento lateral")
         return False
     
-    def AvanzarHasta(self, distance: int, minSpeed: int, maxSpeed: int):
+    def AvanzarHasta(self, distance: int):
         """
         Move forward/backward using signed distance
         - Positive values: Forward (Adelante)
@@ -557,7 +518,7 @@ class MovementController:
         print(f"\n🚀 AVANCE LONGITUDINAL: {'Adelante' if distance > 0 else 'Atrás'} {abs(distance)}u")
         
         # Send command with signed value
-        command = f"17,{distance},{minSpeed},{maxSpeed}"
+        command = f"17,{distance}"
         self._send_command(command)
         
         # Wait for confirmation

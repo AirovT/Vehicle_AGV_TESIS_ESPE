@@ -58,16 +58,16 @@ String Dato_movimiento, Dato_velocidad;
 int potPin = A0; // Pin del potenciómetro
 int Distance;
 int maxPosition = 16900;
-int minSpeed = 70;
 
 unsigned long previousMillis = 0; // Almacena el último tiempo de actualización
 const long interval = 500; // Intervalo de 0.5 segundos (500 milisegundos)
 
 int Pisos[] = {
-  200, // Piso 1, altura aproximada 100
-  260, // Piso 1, altura aproximada 100
-  550, // Piso 2, altura aproximada 200
-  950, // Piso 3, altura aproximada 300
+  
+  100, // Piso 1, altura aproximada 100
+  500, // Piso 1, altura aproximada 100
+  675, // Piso 2, altura aproximada 200
+  1045, // Piso 3, altura aproximada 300
   // Agrega más pisos según sea necesario
 };
 
@@ -362,7 +362,7 @@ void loop() {
       break;
 
       case 17:
-      FrontBack(datoT[1],150);
+      FrontBack(datoT[1],datoT[2],datoT[3]);
       
 
       datoT[0] = 0;
@@ -370,13 +370,13 @@ void loop() {
       
 
       case 18:
-      LeftRight(datoT[1],150);
+      LeftRight(datoT[1],datoT[2],datoT[3]);
 
       datoT[0] = 0;
       break;
 
       case 19:
-      Rotate(datoT[1] , 100);
+      Rotate(datoT[1],datoT[2],datoT[3]);
 
       datoT[0] = 0;
       break;
@@ -468,7 +468,6 @@ void LedStatus(bool activate) {
 }
 
 
-
 void IrPiso(int numeroPisoDeseado) {
     // Verifica que el número de piso deseado esté dentro del rango de la lista
     if (numeroPisoDeseado < 0 || numeroPisoDeseado >= sizeof(Pisos) / sizeof(Pisos[0])) {
@@ -487,6 +486,9 @@ void IrPiso(int numeroPisoDeseado) {
     int velocidadMaxima = 250;
     int velocidadMinima = 175;
 
+    // Guarda el tiempo de inicio para el timeout (5 segundos)
+    unsigned long tiempoInicio = millis();
+
     // Loop para ajustar la altura hasta llegar al piso deseado
     while (true) {
         // Lee la altura actual
@@ -497,25 +499,32 @@ void IrPiso(int numeroPisoDeseado) {
 
         // Calcula la velocidad basada en la diferencia de altura
         int velocidad = map(abs(diferenciaAltura), 1023, 0, velocidadMaxima, velocidadMinima);
-        velocidad = constrain(velocidad, velocidadMinima, velocidadMaxima); // Asegura que la velocidad esté dentro del rango
-        // int velocidad = 150;
-        // Compara la altura actual con la altura deseada
+        velocidad = constrain(velocidad, velocidadMinima, velocidadMaxima);
+
+        // Compara la altura actual con la altura deseada con histeresis
         if (alturaActual < alturaDeseada - histeresisInferior) {
-            // Si la altura actual es menor que la deseada, sube
+            // Si la altura actual es menor, sube
             Subir(velocidad);
             Serial.println("Subiendo hacia el piso " + String(numeroPisoDeseado));
         } else if (alturaActual > alturaDeseada + histeresisSuperior) {
-            // Si la altura actual es mayor que la deseada, baja
+            // Si la altura actual es mayor, baja
             Bajar(velocidad);
             Serial.println("Bajando hacia el piso " + String(numeroPisoDeseado));
         } else {
-            // Si está dentro de la histeresis, detiene el motor
+            // Si está dentro del rango de histeresis, detiene el motor
             Detener();
             Serial.println("Ha llegado al piso " + String(numeroPisoDeseado));
             break; // Sale del bucle while
         }
+
+        // Si han pasado más de 5 segundos y aún no se ha ajustado, sale del bucle
+        if (millis() - tiempoInicio > 5000) {
+            Detener();
+            Serial.println("Timeout: No se pudo ajustar en 5 segundos");
+            break;
+        }
         
-        // Espera un poco antes de volver a comprobar la altura
+        // Espera un poco antes de volver a comprobar
         delay(100);
     }
 }
@@ -905,7 +914,7 @@ void DejarCarga() {
 //     }
 // }
 
-void FrontBack(int position, int Speed)
+void FrontBack(int position, int minSpeed, int maxSpeed)
 {   
         String message = "150,1";
 
@@ -922,7 +931,6 @@ void FrontBack(int position, int Speed)
 
     // Ajusta la dirección de la velocidad según la posición deseada
     int direction = (position < 0) ? -1 : 1;
-    Speed = abs(Speed); // Aseguramos que Speed es positivo
     position = abs(position); // Trabajamos con valores absolutos de posición
     // Bucle de control para avanzar o retroceder
       while ((direction > 0 && PositionTraslation < position) || 
@@ -960,13 +968,13 @@ void FrontBack(int position, int Speed)
           break;
         }
 
-        if (Distance1 <=10)
+        ReadAllDistances();
+        if ((Distance1 <=2 || Distance2 <=2) && position>0)
         {
           Serial.println("EXISTE OBJETIVO INTERFIRIENDO");
-          DefspeedA= 0;
-          DefspeedB= 0;
-          DefspeedC= 0;
-          DefspeedD= 0;
+          controlarTodosLosMotores(50, 50, 50, 50);
+          delay(1);
+          controlarTodosLosMotores(0, 0, 0, 0);
           message = "151,1";
 
         // Enviar el mensaje por Serial1
@@ -1007,7 +1015,7 @@ void FrontBack(int position, int Speed)
                   }
 
                   // Asegura que la velocidad se encuentra entre minSpeed y Speed
-                  int adjustedSpeed = minSpeed + (Speed - minSpeed) * speedFactor;
+                  int adjustedSpeed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
                   adjustedSpeed *= direction; // Aplica la dirección para el control del motor
 
                   // Controla los motores con la velocidad ajustada
@@ -1041,7 +1049,7 @@ void FrontBack(int position, int Speed)
 }
 
 
-void LeftRight(int position, int Speed)
+void LeftRight(int position, int minSpeed, int maxSpeed)
 {   
         String message = "150,1";
 
@@ -1057,7 +1065,6 @@ void LeftRight(int position, int Speed)
 
     // Ajusta la dirección de la velocidad según la posición deseada
     int direction = (position < 0) ? -1 : 1;
-    Speed = abs(Speed); // Aseguramos que Speed es positivo
     position = abs(position); // Trabajamos con valores absolutos de posición
     // Bucle de control para avanzar o retroceder
       while ((direction > 0 && PositionTraslation < position) || 
@@ -1127,7 +1134,7 @@ void LeftRight(int position, int Speed)
                   }
 
                   // Asegura que la velocidad se encuentra entre minSpeed y Speed
-                  int adjustedSpeed = minSpeed + (Speed - minSpeed) * speedFactor;
+                  int adjustedSpeed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
                   adjustedSpeed *= direction; // Aplica la dirección para el control del motor
 
                   // Controla los motores con la velocidad ajustada
@@ -1138,7 +1145,7 @@ void LeftRight(int position, int Speed)
                   Serial.print(PositionTraslation);
                   Serial.print(" Speed: ");
                   Serial.println(adjustedSpeed);
-                  ReadAllDistances();
+                  // ReadAllDistances();
               }
 
               // Resetea el indicador de datos leídos
@@ -1279,7 +1286,7 @@ void LeftRight(int position, int Speed)
 //     }
 // }
 
-void Rotate(int angle, int Speed)
+void Rotate(int angle, int minSpeed, int maxSpeed)
 {
     String message = "150,1";
 
@@ -1295,7 +1302,6 @@ void Rotate(int angle, int Speed)
 
     // Determina la dirección de la rotación
     int direction = (angle < 0) ? -1 : 1;
-    Speed = abs(Speed); // Aseguramos que Speed sea positivo
     angle = abs(angle); // Trabajamos con el valor absoluto del ángulo
 
     // Bucle de control para realizar la rotación
@@ -1362,7 +1368,7 @@ void Rotate(int angle, int Speed)
                 }
 
                 // Asegura que la velocidad se encuentra entre minSpeed y Speed
-                int adjustedSpeed = minSpeed + (Speed - minSpeed) * speedFactor;
+                int adjustedSpeed = minSpeed*1/2 + (maxSpeed - minSpeed*1/2) * speedFactor;
                 adjustedSpeed *= direction; // Aplica la dirección para el control del motor
 
                 // Controla los motores para realizar la rotación
