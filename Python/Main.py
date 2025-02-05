@@ -296,8 +296,8 @@ class VentanaAutomatico:
             # self.GirarGrados(100,10,self.BANDERA)     
             # self.controller.Desplazar(200)
             # self.controller.AvanzarHasta(100)
-            # self.controller.AvanzarHasta(100)
-            # self.controller.GiroRobot(90)
+            self.controller.AvanzarHasta(100)
+            self.controller.GiroRobot(90)
 
             time.sleep(5)
 
@@ -306,9 +306,15 @@ class VentanaAutomatico:
             self.label_estado.config(text="Iniciando proceso, tenga cuidado con el robot de MesaCaja")  # Actualiza el texto del Label
             Objetivo_Aruco = 0 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
             Verificador_Aruco = False #Inicializamos verificacion aruco en false
-            while Verificador_Aruco == False:
-                print("\n\n⏳⏳⏳⏳⏳⏳⏳Entro en el while para buscar el aruco de MesaCaja⏳⏳⏳⏳")
-                Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco) #Llamamos a la funcion para la busqueda del aruco
+            
+            # Bucle controlado por condición
+            while not Verificador_Aruco:
+                Verificador_Aruco = self.Aruco(Objetivo_Aruco)
+                
+                if not Verificador_Aruco:
+                    print("Girando robot...")
+                    self.controller.GiroRobot(45)
+                    time.sleep(5)  # Espera 5 segundos entre verificaciones
 
             self.controller.Estimation(Objetivo_Aruco)   
 
@@ -461,77 +467,106 @@ class VentanaAutomatico:
         
 #Funcion para identificar los arucos y buscar el aruvo objetivo a ser buscado
 
+    # def Aruco(self, Buscar):
+    #     marker_size = 180
+    #     # Obtener el diccionario de marcadores ArUco y los parámetros del detector
+    #     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
+    #     parameters = cv2.aruco.DetectorParameters()
+    #     aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+    #     # cap = cv2.VideoCapture(0) # Iniciar captura desde la cámara (cambiar el número si tienes varias cámaras)
+    #     rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+    #     cap = cv2.VideoCapture(rtsp_url)
+    #     detected_ids = set()  # Usamos un conjunto para evitar duplicados de IDs detectados
+        
+
+    #     while True:
+    #         ret, frame = cap.read()  # Leer un fotograma de la cámara
+    #         if not ret:
+    #             break
+    #         # Convertir el fotograma a escala de grises
+    #         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    #         # Detectar los marcadores ArUco en el fotograma
+    #         # marker_corners, marker_ids, _ = cv2.aruco.detectMarkers(gray_frame, aruco_dict, parameters=aruco_params)
+
+    #         marker_corners, marker_ids, _ = aruco_detector.detectMarkers(gray_frame)
+    #         frame_corrected = frame.copy()
+    #         # Verificar si se detectaron marcadores
+    #         if marker_ids is not None:
+    #             # Añadir los IDs de los marcadores detectados a la lista
+    #             for id in marker_ids.flatten():
+    #                 if id not in detected_ids: #Compara los arucos
+    #                     detected_ids.add(id)
+    #                     if Buscar != id: # si el aruco que se agrega no es el objetivo se ejecuta la funcion Girar la cual mantiene girando al robot hasta que encuentre el aruco objetivo
+    #                         self.Girar() #Funcion de girar el robot
+    #                     if Buscar == id: #Cuando el aruco objetivo es encontrado 
+
+    #                         Verificador_Aruco = True #Asiganamos el valor de true para decir que si se encontro el aruco objetivo
+    #                         datos = "20,0"
+                    
+    #                         mensaje_con_salto = datos + "\n"
+    #                         self.serialArduino.write(mensaje_con_salto.encode())
+    #                         time.sleep(1)
+    #                         # self.serialArduino.close() # Cerramos el envio de datos bluetooth
+    #                         time.sleep(0.5)
+    #                         cap.release() 
+    #                         cv2.destroyAllWindows()
+    #                         return Verificador_Aruco , id 
+    #             # Dibujar los marcadores en el fotograma
+    #             cv2.aruco.drawDetectedMarkers(frame, marker_corners, marker_ids)
+            
+    #         # Crear una ventana con el nombre 'DETECCION DE ARUCO'
+    #         #cv2.namedWindow('DETECCION DE ARUCO')
+
+    #         # Especificar las coordenadas (x, y) de la esquina superior izquierda de la ventana
+    #         posicion_x = 20  # Cambia esto según la posición deseada en el eje x
+    #         posicion_y = 200  # Cambia esto según la posición deseada en el eje y
+
+    #         # Mover la ventana a la posición especificada
+    #         #cv2.moveWindow('DETECCION DE ARUCO', posicion_x, posicion_y)
+            
+    #         scale_percent = 50
+    #         # Mostrar el fotograma con los marcadores
+    #         # Redimensionar las imágenes
+    #         width = int(frame.shape[1] * scale_percent / 100)
+    #         height = int(frame.shape[0] * scale_percent / 100)
+    #         resized_frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+    #         cv2.imshow('Detecion de Aruco', resized_frame)
+
+    #         # Salir del bucle si se presiona la tecla 'q'
+    #         if cv2.waitKey(5) & 0xFF == ord('q'):
+    #             break
+    #     cap.release()
+    #     cv2.destroyAllWindows()
+
+
     def Aruco(self, Buscar):
         marker_size = 180
-        # Obtener el diccionario de marcadores ArUco y los parámetros del detector
         aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
         parameters = cv2.aruco.DetectorParameters()
         aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
-        # cap = cv2.VideoCapture(0) # Iniciar captura desde la cámara (cambiar el número si tienes varias cámaras)
+            
         rtsp_url = "rtsp://admin:L28E4E11@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
         cap = cv2.VideoCapture(rtsp_url)
-        detected_ids = set()  # Usamos un conjunto para evitar duplicados de IDs detectados
-        
+            
+        if not cap.isOpened():
+            return False  # Fallo al conectar con la cámara
 
-        while True:
-            ret, frame = cap.read()  # Leer un fotograma de la cámara
-            if not ret:
-                break
-            # Convertir el fotograma a escala de grises
-            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        ret, frame = cap.read()
+        if not ret:
+            cap.release()
+            return False  # Fallo al capturar el frame
 
-            # Detectar los marcadores ArUco en el fotograma
-            # marker_corners, marker_ids, _ = cv2.aruco.detectMarkers(gray_frame, aruco_dict, parameters=aruco_params)
-
-            marker_corners, marker_ids, _ = aruco_detector.detectMarkers(gray_frame)
-            frame_corrected = frame.copy()
-            # Verificar si se detectaron marcadores
-            if marker_ids is not None:
-                # Añadir los IDs de los marcadores detectados a la lista
-                for id in marker_ids.flatten():
-                    if id not in detected_ids: #Compara los arucos
-                        detected_ids.add(id)
-                        if Buscar != id: # si el aruco que se agrega no es el objetivo se ejecuta la funcion Girar la cual mantiene girando al robot hasta que encuentre el aruco objetivo
-                            self.Girar() #Funcion de girar el robot
-                        if Buscar == id: #Cuando el aruco objetivo es encontrado 
-
-                            Verificador_Aruco = True #Asiganamos el valor de true para decir que si se encontro el aruco objetivo
-                            datos = "20,0"
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        marker_corners, marker_ids, _ = aruco_detector.detectMarkers(gray_frame)
+            
+        cap.release()  # Liberar cámara inmediatamente después de procesar
+            
+        if marker_ids is not None:
+            if Buscar in marker_ids.flatten():
+                return True  # Marcador objetivo detectado
                     
-                            mensaje_con_salto = datos + "\n"
-                            self.serialArduino.write(mensaje_con_salto.encode())
-                            time.sleep(1)
-                            # self.serialArduino.close() # Cerramos el envio de datos bluetooth
-                            time.sleep(0.5)
-                            cap.release() 
-                            cv2.destroyAllWindows()
-                            return Verificador_Aruco , id 
-                # Dibujar los marcadores en el fotograma
-                cv2.aruco.drawDetectedMarkers(frame, marker_corners, marker_ids)
-            
-            # Crear una ventana con el nombre 'DETECCION DE ARUCO'
-            #cv2.namedWindow('DETECCION DE ARUCO')
-
-            # Especificar las coordenadas (x, y) de la esquina superior izquierda de la ventana
-            posicion_x = 20  # Cambia esto según la posición deseada en el eje x
-            posicion_y = 200  # Cambia esto según la posición deseada en el eje y
-
-            # Mover la ventana a la posición especificada
-            #cv2.moveWindow('DETECCION DE ARUCO', posicion_x, posicion_y)
-            
-            scale_percent = 50
-            # Mostrar el fotograma con los marcadores
-            # Redimensionar las imágenes
-            width = int(frame.shape[1] * scale_percent / 100)
-            height = int(frame.shape[0] * scale_percent / 100)
-            resized_frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
-            cv2.imshow('Detecion de Aruco', resized_frame)
-
-            # Salir del bucle si se presiona la tecla 'q'
-            if cv2.waitKey(5) & 0xFF == ord('q'):
-                break
-        cap.release()
-        cv2.destroyAllWindows()
+        return False  # Marcador objetivo NO detectado
 
     
 
